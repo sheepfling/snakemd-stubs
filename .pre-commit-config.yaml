@@ -1,0 +1,27 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint
+        entry: ruff check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        name: Ruff format check
+        entry: ruff format --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: mypy
+        name: mypy strict typing
+        entry: mypy tests
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: pyright
+        name: Pyright strict typing
+        entry: pyright
+        language: system
+        pass_filenames: false
+        always_run: true

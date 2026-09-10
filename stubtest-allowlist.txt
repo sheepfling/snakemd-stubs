@@ -1,0 +1,5 @@
+# SnakeMD exposes its module logger objects at runtime, but they are
+# implementation details and intentionally omitted from the public stubs.
+snakemd.document.logger
+snakemd.elements.logger
+snakemd.templates.logger
