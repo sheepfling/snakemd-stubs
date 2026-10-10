@@ -49,13 +49,58 @@ SnakeMD's `snakemd`, `snakemd.document`, `snakemd.elements`, and
 [`GitHub-Org-Observer/typings/snakemd`](https://github.com/sheepfling/GitHub-Org-Observer/tree/main/typings/snakemd)
 and checked against the published SnakeMD 2.4.0 and 2.4.1 source archives.
 
+## Verification
+
+Hosted CI runs one Ubuntu/Python 3.12 job when a pull request targeting `main`
+is merged, and on manual dispatch. Unmerged closures and direct pushes to
+`main` do not run the job. It checks out the PR merge commit explicitly, builds
+both distributions, installs the wheel, then copies the consumer fixture and
+checker configuration to a temporary directory outside the checkout. Mypy,
+Pyright, and stubtest run there against the installed wheel and the exact
+SnakeMD version in `requirements-compat.txt`.
+
+Run the full local verification before merging:
+
+```shell
+python -m pip install ".[dev]" -r requirements-compat.txt
+ruff check .
+ruff format --check .
+python -m build
+python -m pip install --no-deps --force-reinstall dist/*.whl
+mypy tests
+pyright
+stubtest --allowlist stubtest-allowlist.txt snakemd
+twine check dist/*
+```
+
+Before a release, also check compatibility against every runtime version in the
+supported range. The snippet uses a clean temporary environment for each
+version:
+
+```shell
+for version in 2.4.0 2.4.1; do
+  venv="$(mktemp -d)"
+  python -m venv "$venv"
+  "$venv/bin/python" -m pip install \
+    "SnakeMD==${version}" "mypy>=2.3" "pyright>=1.1.414"
+  "$venv/bin/python" -m pip install --no-deps dist/*.whl
+  "$venv/bin/mypy" tests
+  "$venv/bin/pyright"
+  "$venv/bin/stubtest" --allowlist stubtest-allowlist.txt snakemd
+  rm -rf "$venv"
+done
+```
+
+Dependabot checks SnakeMD weekly and limits version updates to one open pull
+request. The exact compatibility pin makes new releases inside the supported
+`>=2.4,<2.5` range visible to CI without expanding the routine runtime matrix.
+
 ## Releasing
 
-CI validates formatting, type checking, runtime/stub compatibility, and both
-PyPI artifacts. To release, commit the changes, create a matching version tag
-(for example, `v2.4.1.0`), and push the tag. The publish workflow uses PyPI
-Trusted Publishing; configure the PyPI project to trust this repository's
-`publish.yml` workflow before pushing the first release tag.
+To release, commit the changes, create a matching version tag (for example,
+`v2.4.1.0`), and push the tag. The publish workflow uses PyPI Trusted
+Publishing; configure the PyPI project to trust this repository's `publish.yml`
+workflow before pushing the first release tag.
 
 ## License
 
