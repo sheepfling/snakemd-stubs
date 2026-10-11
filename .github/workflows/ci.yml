@@ -34,22 +34,8 @@ jobs:
           "build>=1.2"
           "mypy>=2.3"
           "pyright>=1.1.414"
-      - name: Build distributions
-        run: python -m build
-      - name: Install built wheel
-        run: python -m pip install --disable-pip-version-check --no-deps dist/*.whl
-      - name: Prepare isolated consumer fixture
-        run: |
-          mkdir -p "$RUNNER_TEMP/consumer-fixture/tests"
-          cp tests/typecheck.py "$RUNNER_TEMP/consumer-fixture/tests/typecheck.py"
-          cp pyproject.toml "$RUNNER_TEMP/consumer-fixture/pyproject.toml"
-          cp stubtest-allowlist.txt "$RUNNER_TEMP/consumer-fixture/stubtest-allowlist.txt"
-      - name: Check consumer fixtures with mypy
-        working-directory: ${{ runner.temp }}/consumer-fixture
-        run: mypy tests
-      - name: Check consumer fixtures with Pyright
-        working-directory: ${{ runner.temp }}/consumer-fixture
-        run: pyright
-      - name: Check stubs against SnakeMD runtime
-        working-directory: ${{ runner.temp }}/consumer-fixture
-        run: stubtest --allowlist stubtest-allowlist.txt snakemd
+          "setuptools>=80"
+          "setuptools-scm>=9.2"
+          "wheel"
+      - name: Build outside checkout and verify complete consumer surface
+        run: python tests/verify_compatibility.py
