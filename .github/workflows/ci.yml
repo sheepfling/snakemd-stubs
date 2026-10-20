@@ -20,7 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
-      - uses: sheepfling/alphus/ci/stub-quality@bbfbcddf80822fe1140adc53e2a982cc22898183
+      - uses: sheepfling/alphus/ci/stub-quality@67cb069df070578e787274dddbe61eca3ccdf734
         with:
           requirements-file: requirements-compat.txt
           config-file: stub-quality.json
