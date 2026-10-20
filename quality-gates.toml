@@ -85,14 +85,26 @@ kind = "command"
 name = "Markdown style"
 argv = ["rumdl", "check", "README.md", "docs/API-COVERAGE.md"]
 
+[[orchestration.steps]]
+kind = "command"
+name = "Python tooling types"
+argv = ["{python}", "-m", "mypy", "tests"]
+
+[[orchestration.profiles]]
+name = "stubs"
+steps = ["Build and verify the installed consumer surface"]
+
+[[orchestration.profiles]]
+name = "python"
+steps = [
+  "Authored file size", "Authored line length", "Ruff lint", "Ruff format",
+  "Python tooling types",
+]
+
+[[orchestration.profiles]]
+name = "markdown"
+steps = ["Markdown links and graph", "Markdown style"]
+
 [[orchestration.profiles]]
 name = "check"
-steps = [
-  "Authored file size",
-  "Authored line length",
-  "Build and verify the installed consumer surface",
-  "Ruff lint",
-  "Ruff format",
-  "Markdown links and graph",
-  "Markdown style",
-]
+includes = ["stubs", "python", "markdown"]

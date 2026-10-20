@@ -92,7 +92,7 @@ shared tool configuration and GitHub Action are documented in
 
 Hosted CI remains one Ubuntu/Python 3.12 job after a pull request is merged to
 `main`, with manual dispatch available. It runs the same build and compatibility
-command without the optional Twine step. It uses the exact runtime pin in
+profile, including the configured Twine check. It uses the exact runtime pin in
 `requirements-compat.txt`; opening a PR and direct pushes do not add routine
 hosted runs.
 
@@ -146,3 +146,18 @@ the Git requirement. The consumer wheel has no Alphus runtime dependency.
 Python 3.10 matrix jobs can use a reviewed source checkout via
 `PYTHONPATH=/path/to/alphus/src`, with the same tool dependencies provisioned.
 The main Alphus CLI still requires Python 3.11 or later.
+
+### Consumer profiles
+
+The `check` profile composes `stubs`, `python`, and `markdown`. Run the complete
+selection with the installed pinned Alphus tooling:
+
+```shell
+alphus --root . --config quality-gates.toml --run --profile check
+```
+
+Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
+part. The stub stage builds and installs the wheel before later tooling runs.
+The shared `ci/quality` action executes this same composition once. Each
+repository retains its native tool settings, examples and API expectations;
+Alphus owns the repeated checking mechanisms and their regression tests.
