@@ -53,12 +53,14 @@ definitions and are audited against the installed runtime source and wheel.
 
 ## Verification
 
-Install the package's development tools and the exact runtime pin into the
-active virtual environment. The `dev` extra centralizes the local verification
+Use a Python 3.11+ verification environment. Install the package's development
+tools, pinned Alphus tooling and exact runtime pin into it. The `dev` extra
+centralizes the local verification
 tools; hosted CI installs only the subset needed for its single merge job.
 
 ```shell
 python -m pip install ".[dev]" -r requirements-compat.txt
+python -m pip install -r requirements-quality.txt
 ```
 
 The full local profile uses Alphus as the configured orchestrator, plus the
