@@ -57,7 +57,13 @@ rule = "line-length"
 [[orchestration.steps]]
 kind = "command"
 name = "Build and verify the installed consumer surface"
-argv = ["{python}", "-m", "tests.verify_compatibility", "--with-twine"]
+argv = [
+  "{python}",
+  "../alphus/ci/stub-quality/python/alphus_stub_quality/verify.py",
+  "--root", ".",
+  "--config", "stub-quality.json",
+  "--with-twine",
+]
 
 [[orchestration.steps]]
 kind = "command"

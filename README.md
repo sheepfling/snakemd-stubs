@@ -70,15 +70,22 @@ alphus --root . --config quality-gates.toml --run --profile check
 ```
 
 The project owns `quality-gates.toml`; it calls Alphus's existing rules rather
-than copying their implementations. The compatibility command builds both
+than copying their implementations. The shared CI-only verification tools also
+live in the Alphus checkout and are invoked directly, so `snakemd-stubs` does
+not install or depend on Alphus. The compatibility command builds both
 distributions from a temporary source copy, installs the wheel, and runs the
 runtime inventory, strict positive and expected-negative consumer probes,
 stubtest, and a runtime smoke through a consumer directory outside the source
-checkout. Run it directly with `--with-twine` if Alphus is not installed.
+checkout.
 
 ```shell
-python -m tests.verify_compatibility --with-twine
+python ../alphus/ci/stub-quality/python/alphus_stub_quality/verify.py \
+  --root . --config stub-quality.json --with-twine
 ```
+
+This local command assumes sibling `snakemd-stubs` and `alphus` checkouts. The
+shared tool configuration and GitHub Action are documented in
+[Alphus's stub-package CI guide](https://github.com/sheepfling/alphus/blob/main/docs/STUB-PACKAGE-CI.md).
 
 Hosted CI remains one Ubuntu/Python 3.12 job after a pull request is merged to
 `main`, with manual dispatch available. It runs the same build and compatibility
@@ -95,7 +102,8 @@ the development extra and selected runtime, then run:
 
 ```shell
 python -m pip install ".[dev]" "SnakeMD==X.Y.Z"
-python -m tests.verify_compatibility --with-twine
+python ../alphus/ci/stub-quality/python/alphus_stub_quality/verify.py \
+  --root . --config stub-quality.json --with-twine
 ```
 
 Replace `X.Y.Z` with the runtime release for that matrix leg.

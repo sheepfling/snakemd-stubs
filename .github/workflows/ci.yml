@@ -20,22 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: sheepfling/alphus/ci/stub-quality@be9408d3a7af058955f1e61f56719d1e723927e8
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            requirements-compat.txt
-      - name: Install runtime and verification tools
-        run: >-
-          python -m pip install --disable-pip-version-check
-          -r requirements-compat.txt
-          "build>=1.2"
-          "mypy>=2.3"
-          "pyright>=1.1.414"
-          "setuptools>=80"
-          "setuptools-scm>=9.2"
-          "wheel"
-      - name: Build outside checkout and verify complete consumer surface
-        run: python -m tests.verify_compatibility
+          requirements-file: requirements-compat.txt
+          config-file: stub-quality.json

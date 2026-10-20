@@ -48,14 +48,17 @@ Run the compatibility check from the repository root after installing the
 development extra and a supported SnakeMD release:
 
 ```shell
-python -m tests.verify_compatibility --with-twine
+python ../alphus/ci/stub-quality/python/alphus_stub_quality/verify.py \
+  --root . --config stub-quality.json --with-twine
 ```
 
 It builds distributions from a temporary source copy, installs the wheel, and
-runs the audit and consumer checks outside the checkout. Hosted CI runs the
-same compatibility command on its configured Python version and exact runtime
-pin. Before release, run the command in clean environments for the declared
-Python versions and the supported runtime releases.
+runs the audit and consumer checks outside the checkout. The generic verifier
+and API-audit support live in Alphus; API expectations and fixtures stay here.
+Hosted CI calls the same verifier through Alphus's pinned composite action on
+its configured Python version and exact runtime pin. Before release, run the
+command in clean environments for the declared Python versions and the
+supported runtime releases.
 
 These checks provide structural API, type-checking, and selected runtime
 evidence. They do not prove every Markdown rendering behavior or error case.

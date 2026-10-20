@@ -19,15 +19,14 @@ from pathlib import Path
 from types import ModuleType
 from typing import NoReturn, cast
 
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
-
-from .api_audit_support import (
+from alphus_stub_quality.api_audit_support import (
     assigned_public_instance_attributes,
     decorator_names,
     validate_enum,
     validate_signature,
 )
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 MODULES = {
     "snakemd": "__init__.pyi",
@@ -35,6 +34,14 @@ MODULES = {
     "snakemd.elements": "elements.pyi",
     "snakemd.templates": "templates.pyi",
 }
+ANNOTATION_WIDENINGS = {
+    ("snakemd.document.Document.add_table_from_csv", "path"): (("name", "str"),),
+    ("snakemd.templates.CSVTable.__init__", "path"): (("name", "str"),),
+}
+RETURN_ANNOTATION_WIDENINGS = {
+    "snakemd.elements.Inline.get_link": (("name", "None"),),
+}
+SCOPED_TYPE_NAMES = frozenset({"Kind", "Align"})
 
 # Snapshot every other non-private runtime binding so wildcard imports and
 # imported implementation helpers cannot silently become an unreviewed API.
@@ -256,6 +263,9 @@ def validate_stub_tree(
                 stub_function,
                 source_function,
                 value,
+                annotation_widenings=ANNOTATION_WIDENINGS,
+                return_annotation_widenings=RETURN_ANNOTATION_WIDENINGS,
+                scoped_type_names=SCOPED_TYPE_NAMES,
             )
             runtime_methods += 1
             continue
@@ -323,6 +333,9 @@ def validate_stub_tree(
                     source_member,
                     runtime_member,
                     owner_class=name,
+                    annotation_widenings=ANNOTATION_WIDENINGS,
+                    return_annotation_widenings=RETURN_ANNOTATION_WIDENINGS,
+                    scoped_type_names=SCOPED_TYPE_NAMES,
                 )
                 runtime_methods += 1
             elif isinstance(stub_member, ast.ClassDef):
