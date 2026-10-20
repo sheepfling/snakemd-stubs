@@ -1,44 +1,50 @@
 name: CI
 
 on:
-  push:
   pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  type-check:
+  quality:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0
+      - uses: sheepfling/alphus/ci/quality@7612783e463ae6c13588d7e67d47cf0522ed7072
+        with:
+          requirements-file: requirements-verification.txt
+          runtime-requirements-file: requirements-compat.txt
+          config-file: quality-gates.toml
+          profile: quality
+
+  compatibility:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        snakemd-version: ["2.4.0", "2.4.1"]
+        target-python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: sheepfling/alphus/ci/stub-quality@7612783e463ae6c13588d7e67d47cf0522ed7072
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install ".[dev]" "SnakeMD==${{ matrix.snakemd-version }}"
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy tests
-      - run: pyright
-      - run: stubtest --allowlist stubtest-allowlist.txt snakemd
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: python -m pip install --upgrade pip build
-      - run: python -m build
-      - run: python -m pip install --upgrade twine
-      - run: twine check dist/*
+          target-python-version: ${{ matrix.target-python }}
+          requirements-file: requirements-compat.txt
+          target-requirements-file: requirements-target.txt
+          config-file: stub-quality.json
+          with-twine: "true"

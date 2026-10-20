@@ -31,7 +31,10 @@ dev = [
     "pre-commit>=4.0",
     "pyright>=1.1.414",
     "ruff>=0.16",
+    "setuptools>=80",
+    "setuptools-scm>=9.2",
     "twine>=7.0",
+    "wheel",
 ]
 
 [project.urls]
@@ -54,8 +57,10 @@ local_scheme = "no-local-version"
 python_version = "3.10"
 strict = true
 
+# Scope Pyright to the installed-package consumer fixture; audit/test helpers
+# have separate checks and are not part of the public type-consumer probe.
 [tool.pyright]
-include = ["tests"]
+include = ["tests/typecheck.py"]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
 reportMissingModuleSource = "none"

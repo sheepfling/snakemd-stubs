@@ -1,0 +1,4 @@
+# The consumer owns its native toolchain; Alphus owns orchestration.
+.[dev]
+mdrepo==0.0.1.post0
+rumdl==0.2.77

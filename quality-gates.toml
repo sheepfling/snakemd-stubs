@@ -1,0 +1,114 @@
+schema_version = 1
+
+[files]
+include = [
+  "snakemd-stubs/**/*.pyi",
+  "tests/**/*.py",
+  "README.md",
+  "docs/**/*.md",
+  "*.toml",
+  ".rumdl.toml",
+]
+exclude = []
+
+[checks.file_size]
+code_extensions = [".py", ".pyi"]
+code_limit = 800
+hard_limit = 1200
+initializer_name = "__init__.py"
+initializer_limit = 100
+exclude = []
+
+[checks.line_length]
+exclude = []
+
+[checks.line_length.limits]
+".py" = 100
+".pyi" = 100
+".md" = 120
+".toml" = 120
+
+[checks.json_structure]
+extensions = [".py"]
+exclude = []
+
+[checks.output_escaping]
+extensions = [".py"]
+exclude = []
+
+[checks.path_discovery]
+extensions = [".py"]
+exclude = []
+inspection_exclude = []
+
+[orchestration]
+default_profile = "check"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Authored file size"
+rule = "file-size"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Authored line length"
+rule = "line-length"
+
+[[orchestration.steps]]
+kind = "command"
+name = "Build and verify the installed consumer surface"
+argv = [
+  "{python}",
+  "-m", "alphus_stub_quality.verify",
+  "--root", ".",
+  "--config", "stub-quality.json",
+  "--with-twine",
+]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Ruff lint"
+argv = ["{python}", "-m", "ruff", "check", "tests"]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Ruff format"
+argv = ["{python}", "-m", "ruff", "format", "--check", "tests"]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Markdown links and graph"
+argv = ["mdrepo", "--root", ".", "check"]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Markdown style"
+argv = ["rumdl", "check", "README.md", "docs/API-COVERAGE.md"]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Python tooling types"
+argv = ["{python}", "-m", "mypy", "tests"]
+
+[[orchestration.profiles]]
+name = "stubs"
+steps = ["Build and verify the installed consumer surface"]
+
+[[orchestration.profiles]]
+name = "python"
+steps = [
+  "Authored file size", "Authored line length", "Ruff lint", "Ruff format",
+  "Python tooling types",
+]
+
+[[orchestration.profiles]]
+name = "markdown"
+steps = ["Markdown links and graph", "Markdown style"]
+
+[[orchestration.profiles]]
+name = "quality"
+includes = ["python", "markdown"]
+
+[[orchestration.profiles]]
+name = "check"
+includes = ["stubs", "python", "markdown"]

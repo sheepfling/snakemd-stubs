@@ -3,25 +3,31 @@ repos:
     hooks:
       - id: ruff-check
         name: Ruff lint
-        entry: ruff check .
+        entry: python -m ruff check .
         language: system
         pass_filenames: false
         always_run: true
       - id: ruff-format
         name: Ruff format check
-        entry: ruff format --check .
+        entry: python -m ruff format --check .
         language: system
         pass_filenames: false
         always_run: true
       - id: mypy
         name: mypy strict typing
-        entry: mypy tests
+        entry: python -m mypy tests
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: negative-typecheck
+        name: Mypy and Pyright reject invalid consumer calls
+        entry: python -m alphus_stub_quality.typing_fixtures --root . --positive-fixture tests/typecheck.py --negative-fixture tests/negative_typecheck.py.fixture
         language: system
         pass_filenames: false
         always_run: true
       - id: pyright
         name: Pyright strict typing
-        entry: pyright
+        entry: python -m pyright
         language: system
         pass_filenames: false
         always_run: true
