@@ -1,0 +1,7 @@
+# Target runtime tools; Alphus and Pyright belong in the separate checker env.
+build>=1.2
+mypy>=2.3
+setuptools>=80
+setuptools-scm>=9.2
+wheel
+typing_extensions>=4.0

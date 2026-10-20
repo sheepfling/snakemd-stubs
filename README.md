@@ -56,7 +56,7 @@ definitions and are audited against the installed runtime source and wheel.
 Use a Python 3.11+ verification environment. Install the package's development
 tools, pinned Alphus tooling and exact runtime pin into it. The `dev` extra
 centralizes the local verification
-tools; hosted CI installs only the subset needed for its single merge job.
+tools; hosted CI separates repository quality from target compatibility.
 
 ```shell
 python -m pip install ".[dev]" -r requirements-compat.txt
@@ -90,30 +90,17 @@ command. The
 shared tool configuration and GitHub Action are documented in
 [Alphus's stub-package CI guide](https://github.com/sheepfling/alphus/blob/main/docs/STUB-PACKAGE-CI.md).
 
-Hosted CI remains one Ubuntu/Python 3.12 job after a pull request is merged to
-`main`, with manual dispatch available. It runs the same build and compatibility
-profile, including the configured Twine check. It uses the exact runtime pin in
-`requirements-compat.txt`; opening a PR and direct pushes do not add routine
-hosted runs.
+Hosted CI separates one repository-quality job from installed-wheel target
+compatibility on Python 3.10–3.14, with a Python 3.12 checker. Triggers remain
+merged PRs against `main` and manual dispatch. Opening a PR or pushing its branch
+does not trigger these jobs. The exact runtime baseline is
+`requirements-compat.txt`.
 
-Before a release, run the compatibility checks across every Python version
-declared by the package and each SnakeMD release in the supported runtime
-range. Use a clean virtual environment for each combination. The routine
-baseline is the exact pin in `requirements-compat.txt`; select each additional
-runtime release explicitly for its matrix leg. In each environment, install
-the development extra and selected runtime, then run:
-
-```shell
-python -m pip install ".[dev]" "SnakeMD==X.Y.Z"
-python -m alphus_stub_quality.verify \
-  --root . --config stub-quality.json --with-twine
-```
-
-Replace `X.Y.Z` with the runtime release for that matrix leg.
-
-Routine CI proves one current runtime on Python 3.12. The release matrix is the
-separate evidence for the broader declared Python/runtime support; neither
-structural API matching nor a consumer smoke proves full behavioral semantics.
+Before release, also check every SnakeMD release inside the supported runtime
+range. Provision each selected runtime into each target venv and invoke the
+checker with `--target-python` as shown below. The routine matrix establishes
+only the exact pinned runtime; structural parity and smoke cases do not prove
+all runtime behavior or untested releases.
 
 Dependabot checks SnakeMD weekly and limits version updates to one open pull
 request. The exact compatibility pin makes new releases inside the supported
@@ -143,9 +130,23 @@ python -m alphus_stub_quality.verify --root . --config stub-quality.json --with-
 
 For an unpublished local candidate, install its built Alphus wheel instead of
 the Git requirement. The consumer wheel has no Alphus runtime dependency.
-Python 3.10 matrix jobs can use a reviewed source checkout via
-`PYTHONPATH=/path/to/alphus/src`, with the same tool dependencies provisioned.
-The main Alphus CLI still requires Python 3.11 or later.
+Alphus and native Mypy/Pyright run in a Python 3.11+ checker environment.
+Build/install, API audit, native stubtest and smoke execute in a distinct target
+venv. The target does not install Alphus. For example, after provisioning the
+checker as above, use a Python 3.10 target:
+
+```shell
+python3.10 -m venv /path/to/target
+/path/to/target/bin/python -m pip install -r requirements-target.txt \
+  -r requirements-compat.txt
+python -m alphus_stub_quality.verify --root . --config stub-quality.json \
+  --with-twine --target-python /path/to/target/bin/python --report target-result.json
+```
+
+Repeat with each Python target 3.10–3.14. Both native static checkers explicitly
+select that target's packages and language version; the JSON report records
+checker/target identities and each executed stage. Failed target checks stop the
+run without falling back to the checker.
 
 ### Consumer profiles
 
@@ -158,6 +159,9 @@ alphus --root . --config quality-gates.toml --run --profile check
 
 Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
 part. The stub stage builds and installs the wheel before later tooling runs.
-The shared `ci/quality` action executes this same composition once. Each
+Hosted CI runs `quality` (`python` plus `markdown`) once and the shared
+`ci/stub-quality` action once per target 3.10–3.14, using checker Python 3.12.
+It runs only after a merged PR or manual dispatch. Both action references and
+`requirements-quality.txt` pin the same immutable Alphus commit. Each
 repository retains its native tool settings, examples and API expectations;
 Alphus owns the repeated checking mechanisms and their regression tests.

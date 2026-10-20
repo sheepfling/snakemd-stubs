@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  quality:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
@@ -20,9 +20,31 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
-      - uses: sheepfling/alphus/ci/quality@d613d28dad418ed02a0fd2a94ee6e75df09abe9e
+      - uses: sheepfling/alphus/ci/quality@7612783e463ae6c13588d7e67d47cf0522ed7072
         with:
           requirements-file: requirements-verification.txt
           runtime-requirements-file: requirements-compat.txt
           config-file: quality-gates.toml
-          profile: check
+          profile: quality
+
+  compatibility:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target-python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+      - uses: sheepfling/alphus/ci/stub-quality@7612783e463ae6c13588d7e67d47cf0522ed7072
+        with:
+          python-version: "3.12"
+          target-python-version: ${{ matrix.target-python }}
+          requirements-file: requirements-compat.txt
+          target-requirements-file: requirements-target.txt
+          config-file: stub-quality.json
+          with-twine: "true"
