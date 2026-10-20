@@ -48,7 +48,7 @@ Run the compatibility check from the repository root after installing the
 development extra and a supported SnakeMD release:
 
 ```shell
-python tests/verify_compatibility.py --with-twine
+python -m tests.verify_compatibility --with-twine
 ```
 
 It builds distributions from a temporary source copy, installs the wheel, and

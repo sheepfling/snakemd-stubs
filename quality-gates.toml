@@ -57,7 +57,7 @@ rule = "line-length"
 [[orchestration.steps]]
 kind = "command"
 name = "Build and verify the installed consumer surface"
-argv = ["{python}", "tests/verify_compatibility.py", "--with-twine"]
+argv = ["{python}", "-m", "tests.verify_compatibility", "--with-twine"]
 
 [[orchestration.steps]]
 kind = "command"

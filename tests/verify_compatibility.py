@@ -11,17 +11,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CHECK_FILES = (
-    "pyproject.toml",
-    "requirements-compat.txt",
-    "stubtest-allowlist.txt",
-    "tests/api_audit_support.py",
-    "tests/audit_api_coverage.py",
-    "tests/check_negative_typecheck.py",
-    "tests/negative_typecheck.py.fixture",
-    "tests/runtime_smoke.py",
-    "tests/typecheck.py",
-)
+CONSUMER_FILES = ("pyproject.toml", "requirements-compat.txt", "stubtest-allowlist.txt")
 IGNORED_BUILD_PATHS = {
     ".mypy_cache",
     ".pytest_cache",
@@ -58,11 +48,10 @@ def prepare_source_copy(destination: Path) -> None:
 
 def prepare_consumer(source_copy: Path, destination: Path) -> None:
     destination.mkdir()
-    for relative in CHECK_FILES:
+    for relative in CONSUMER_FILES:
         source = source_copy / relative
-        target = destination / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        shutil.copy2(source, destination / relative)
+    shutil.copytree(source_copy / "tests", destination / "tests")
 
 
 def built_distributions(directory: Path) -> tuple[Path, Path]:

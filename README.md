@@ -76,6 +76,10 @@ runtime inventory, strict positive and expected-negative consumer probes,
 stubtest, and a runtime smoke through a consumer directory outside the source
 checkout. Run it directly with `--with-twine` if Alphus is not installed.
 
+```shell
+python -m tests.verify_compatibility --with-twine
+```
+
 Hosted CI remains one Ubuntu/Python 3.12 job after a pull request is merged to
 `main`, with manual dispatch available. It runs the same build and compatibility
 command without the optional Twine step. It uses the exact runtime pin in
@@ -91,7 +95,7 @@ the development extra and selected runtime, then run:
 
 ```shell
 python -m pip install ".[dev]" "SnakeMD==X.Y.Z"
-python tests/verify_compatibility.py --with-twine
+python -m tests.verify_compatibility --with-twine
 ```
 
 Replace `X.Y.Z` with the runtime release for that matrix leg.

@@ -38,4 +38,4 @@ jobs:
           "setuptools-scm>=9.2"
           "wheel"
       - name: Build outside checkout and verify complete consumer surface
-        run: python tests/verify_compatibility.py
+        run: python -m tests.verify_compatibility
