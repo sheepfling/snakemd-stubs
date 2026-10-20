@@ -1,0 +1,2 @@
+# Shared development/verification tooling; never a consumer runtime dependency.
+alphus @ git+https://github.com/sheepfling/alphus.git@bb4a1e8ef2a6442a844c16fffc546f8ae8f52a05
