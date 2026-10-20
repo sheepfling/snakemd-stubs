@@ -5,7 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from typecheck import exercise_public_api
+from .typecheck import exercise_public_api
 
 
 def main() -> None:

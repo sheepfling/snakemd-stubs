@@ -128,7 +128,7 @@ def main() -> None:
         )
         elapsed += run_step(
             "Runtime-to-stub API inventory",
-            [sys.executable, "tests/audit_api_coverage.py"],
+            [sys.executable, "-m", "tests.audit_api_coverage"],
             cwd=consumer,
         )
         elapsed += run_step(
@@ -150,7 +150,7 @@ def main() -> None:
         )
         elapsed += run_step(
             "Expected-negative mypy and Pyright probes",
-            [sys.executable, "tests/check_negative_typecheck.py"],
+            [sys.executable, "-m", "tests.check_negative_typecheck"],
             cwd=consumer,
         )
         elapsed += run_step(
@@ -167,8 +167,8 @@ def main() -> None:
         )
         elapsed += run_step(
             "Runtime consumer smoke",
-            [sys.executable, "runtime_smoke.py"],
-            cwd=consumer / "tests",
+            [sys.executable, "-m", "tests.runtime_smoke"],
+            cwd=consumer,
         )
 
     print(f"Compatibility aggregate passed in {elapsed:.2f}s of measured tool time.")

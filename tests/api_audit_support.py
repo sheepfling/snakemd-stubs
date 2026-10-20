@@ -7,7 +7,7 @@ import inspect
 from collections.abc import Iterable
 from enum import Enum
 from pathlib import Path
-from typing import cast
+from typing import NoReturn, cast
 
 ANNOTATION_WIDENINGS = {
     ("snakemd.document.Document.add_table_from_csv", "path"): (("name", "str"),),
@@ -18,7 +18,7 @@ RETURN_ANNOTATION_WIDENINGS = {
 }
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise SystemExit(f"API coverage audit failed: {message}")
 
 
@@ -54,9 +54,13 @@ def ast_parameters(
         )
     if args.vararg is not None:
         result.append((args.vararg.arg, "var-positional", None))
-    for argument, default in zip(args.kwonlyargs, args.kw_defaults):
+    for argument, keyword_default in zip(args.kwonlyargs, args.kw_defaults):
         result.append(
-            (argument.arg, "keyword-only", ast_default(default) if default is not None else None)
+            (
+                argument.arg,
+                "keyword-only",
+                ast_default(keyword_default) if keyword_default is not None else None,
+            )
         )
     if args.kwarg is not None:
         result.append((args.kwarg.arg, "var-keyword", None))
@@ -70,6 +74,8 @@ def runtime_parameters(value: object) -> list[tuple[str, str, str | None]]:
         value = value.fget
     if value is None:
         fail("a stub property has no runtime getter")
+    if not callable(value):
+        fail(f"runtime member is not callable: {value!r}")
     try:
         signature = inspect.signature(value, follow_wrapped=False)
     except (TypeError, ValueError) as error:

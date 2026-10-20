@@ -17,16 +17,17 @@ from enum import Enum
 from importlib.metadata import distribution, version
 from pathlib import Path
 from types import ModuleType
-from typing import cast
+from typing import NoReturn, cast
 
-from api_audit_support import (
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+
+from .api_audit_support import (
     assigned_public_instance_attributes,
     decorator_names,
     validate_enum,
     validate_signature,
 )
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
 
 MODULES = {
     "snakemd": "__init__.pyi",
@@ -126,7 +127,7 @@ CLASS_METADATA = {
 }
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise SystemExit(f"API coverage audit failed: {message}")
 
 
@@ -259,12 +260,13 @@ def validate_stub_tree(
             runtime_methods += 1
             continue
 
-        runtime_class = cast(type[object], value)
+        if not inspect.isclass(value):
+            fail(f"runtime API member {module_name}.{name} is not a class or function")
+        runtime_class = value
         stub_class = stub_classes[name]
         source_class = source_classes.get(name)
         if source_class is None:
             fail(f"missing runtime source class for {module_name}.{name}")
-        runtime_class = cast(type[object], value)
         stub_bases = [
             base.id
             if isinstance(base, ast.Name)
@@ -326,14 +328,10 @@ def validate_stub_tree(
             elif isinstance(stub_member, ast.ClassDef):
                 if not inspect.isclass(runtime_member):
                     fail(f"stub nested class {label} is not a runtime class")
-                if not issubclass(cast(type[object], runtime_member), Enum):
+                if not issubclass(runtime_member, Enum):
                     fail(f"nested class {label} is not an enum and needs explicit audit support")
                 enum_count += 1
-                validate_enum(
-                    label,
-                    cast(type[Enum], runtime_member),
-                    stub_member,
-                )
+                validate_enum(label, runtime_member, stub_member)
             else:
                 if inspect.isroutine(runtime_member) or isinstance(
                     runtime_member, (staticmethod, classmethod, property)
@@ -359,10 +357,10 @@ def validate_stub_tree(
             )
 
         for member_name, runtime_member in runtime_member_values.items():
-            stub_member = stub_members.get(member_name)
-            if not isinstance(stub_member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            declared_member = stub_members.get(member_name)
+            if not isinstance(declared_member, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
-            stub_abstract = "abstractmethod" in decorator_names(stub_member)
+            stub_abstract = "abstractmethod" in decorator_names(declared_member)
             runtime_abstract = bool(getattr(runtime_member, "__isabstractmethod__", False))
             if stub_abstract != runtime_abstract:
                 fail(f"abstractmethod marker differs for {module_name}.{name}.{member_name}")
@@ -396,7 +394,7 @@ def main() -> None:
     package_module_names = set(MODULES)
     runtime_root = runtime_modules["snakemd"]
     stub_distribution = distribution("snakemd-stubs")
-    stub_root = Path(stub_distribution.locate_file("snakemd-stubs"))
+    stub_root = Path(str(stub_distribution.locate_file("snakemd-stubs")))
 
     runtime_version = version("SnakeMD")
     required = [
@@ -466,10 +464,10 @@ def main() -> None:
 
     for module_name, runtime_module in runtime_modules.items():
         for name, value in module_api_objects(runtime_module).items():
-            if not inspect.isclass(value) or issubclass(cast(type[object], value), Enum):
+            if not inspect.isclass(value) or issubclass(value, Enum):
                 continue
             runtime_abstract = set(getattr(value, "__abstractmethods__", ()))
-            stub_abstract = declared_abstract_methods(cast(type[object], value), trees)
+            stub_abstract = declared_abstract_methods(value, trees)
             if stub_abstract != runtime_abstract:
                 fail(
                     f"abstract class contract differs for {module_name}.{name}: "

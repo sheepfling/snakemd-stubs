@@ -14,10 +14,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: mypy
-        # Type-check the consumer contract; invalid calls are checked below.
-        # Audit helpers use dynamic AST inspection and run in the compatibility aggregate.
-        name: mypy strict consumer typing
-        entry: python -m mypy tests/typecheck.py
+        name: mypy strict typing
+        entry: python -m mypy tests
         language: system
         pass_filenames: false
         always_run: true
