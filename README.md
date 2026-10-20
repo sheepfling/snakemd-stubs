@@ -88,7 +88,9 @@ python -m alphus_stub_quality.verify \
 Install the pinned Alphus wheel in the verification environment before this
 command. The
 shared tool configuration and GitHub Action are documented in
-[Alphus's stub-package CI guide](https://github.com/sheepfling/alphus/blob/main/docs/STUB-PACKAGE-CI.md).
+[Alphus's stub-package CI guide][alphus-ci].
+
+[alphus-ci]: https://github.com/sheepfling/alphus/blob/7612783e463ae6c13588d7e67d47cf0522ed7072/docs/STUB-PACKAGE-CI.md
 
 Hosted CI separates one repository-quality job from installed-wheel target
 compatibility on Python 3.10–3.14, with a Python 3.12 checker. Triggers remain
