@@ -20,7 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
-      - uses: sheepfling/alphus/ci/quality@7612783e463ae6c13588d7e67d47cf0522ed7072
+      - uses: sheepfling/alphus/ci/quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
         with:
           requirements-file: requirements-verification.txt
           runtime-requirements-file: requirements-compat.txt
@@ -40,7 +40,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
-      - uses: sheepfling/alphus/ci/stub-quality@7612783e463ae6c13588d7e67d47cf0522ed7072
+      - uses: sheepfling/alphus/ci/stub-quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
         with:
           python-version: "3.12"
           target-python-version: ${{ matrix.target-python }}

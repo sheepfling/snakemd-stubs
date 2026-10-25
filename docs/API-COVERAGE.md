@@ -48,7 +48,7 @@ Run the compatibility check from the repository root after installing the
 development extra and a supported SnakeMD release:
 
 ```shell
-python -m alphus_stub_quality.verify \
+alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
 

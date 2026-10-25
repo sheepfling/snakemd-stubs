@@ -72,8 +72,8 @@ alphus --root . --config quality-gates.toml --run --profile check
 ```
 
 The project owns `quality-gates.toml`; it calls Alphus's existing rules rather
-than copying their implementations. The shared verification tools also
-ship in the Alphus wheel and are invoked as a module. `snakemd-stubs` uses
+than copying their implementations. Alphus's installed CLI entry points provide
+the shared verification tools. `snakemd-stubs` uses
 Alphus only as a development tool. The compatibility command builds both
 distributions from a temporary source copy, installs the wheel, and runs the
 runtime inventory, strict positive and expected-negative consumer probes,
@@ -81,7 +81,7 @@ stubtest, and a runtime smoke through a consumer directory outside the source
 checkout.
 
 ```shell
-python -m alphus_stub_quality.verify \
+alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
 
@@ -90,7 +90,7 @@ command. The
 shared tool configuration and GitHub Action are documented in
 [Alphus's stub-package CI guide][alphus-ci].
 
-[alphus-ci]: https://github.com/sheepfling/alphus/blob/7612783e463ae6c13588d7e67d47cf0522ed7072/docs/STUB-PACKAGE-CI.md
+[alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
 
 Hosted CI separates one repository-quality job from installed-wheel target
 compatibility on Python 3.10–3.14, with a Python 3.12 checker. Triggers remain
@@ -127,7 +127,7 @@ in a dedicated Python 3.11+ verification environment:
 
 ```shell
 python -m pip install -r requirements-quality.txt
-python -m alphus_stub_quality.verify --root . --config stub-quality.json --with-twine
+alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 
 For an unpublished local candidate, install its built Alphus wheel instead of
@@ -141,7 +141,7 @@ checker as above, use a Python 3.10 target:
 python3.10 -m venv /path/to/target
 /path/to/target/bin/python -m pip install -r requirements-target.txt \
   -r requirements-compat.txt
-python -m alphus_stub_quality.verify --root . --config stub-quality.json \
+alphus-stub-quality --root . --config stub-quality.json \
   --with-twine --target-python /path/to/target/bin/python --report target-result.json
 ```
 

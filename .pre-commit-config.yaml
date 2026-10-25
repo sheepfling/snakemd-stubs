@@ -21,7 +21,7 @@ repos:
         always_run: true
       - id: negative-typecheck
         name: Mypy and Pyright reject invalid consumer calls
-        entry: python -m alphus_stub_quality.typing_fixtures --root . --positive-fixture tests/typecheck.py --negative-fixture tests/negative_typecheck.py.fixture
+        entry: alphus-typing-fixtures --root . --positive-fixture tests/typecheck.py --negative-fixture tests/negative_typecheck.py.fixture --checkers mypy pyright
         language: system
         pass_filenames: false
         always_run: true

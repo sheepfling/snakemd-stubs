@@ -5,6 +5,10 @@
     "api_audit_module": "tests.audit_api_coverage",
     "positive_fixture": "tests/typecheck.py",
     "negative_fixture": "tests/negative_typecheck.py.fixture",
+    "typing_checkers": [
+      "mypy",
+      "pyright"
+    ],
     "runtime_smoke_module": "tests.runtime_smoke"
   }
 }

@@ -58,8 +58,7 @@ rule = "line-length"
 kind = "command"
 name = "Build and verify the installed consumer surface"
 argv = [
-  "{python}",
-  "-m", "alphus_stub_quality.verify",
+  "alphus-stub-quality",
   "--root", ".",
   "--config", "stub-quality.json",
   "--with-twine",
