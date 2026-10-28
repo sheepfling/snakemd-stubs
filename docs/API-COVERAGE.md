@@ -12,9 +12,9 @@ The package supports the public class and function facade exported by
 modules are implementation details, not additional supported API.
 
 The package metadata declares the supported Python and SnakeMD ranges. Routine
-compatibility checks use the exact runtime pin in `requirements-compat.txt`.
-Additional runtime releases inside the supported range are checked as part of
-the release-only compatibility matrix.
+compatibility checks use the exact runtime pin in the `target` dependency group.
+Additional runtime releases inside the supported range are checked in separate
+release-only environments.
 
 ## Audit and consumer checks
 
@@ -44,8 +44,9 @@ annotation checks strict.
 
 ## Run and limits
 
-Run the compatibility check from the repository root after installing the
-development extra and a supported SnakeMD release:
+Run the optional local compatibility check from the repository root after
+installing the `dev` and `local-alphus` dependency groups and provisioning a
+target environment from the `target` group:
 
 ```shell
 alphus-stub-quality \
@@ -55,10 +56,11 @@ alphus-stub-quality \
 It builds distributions from a temporary source copy, installs the wheel, and
 runs the audit and consumer checks outside the checkout. The generic verifier
 and API-audit support live in Alphus; API expectations and fixtures stay here.
-Hosted CI calls the same verifier through Alphus's pinned composite action on
-its configured Python version and exact runtime pin. Before release, run the
-command in clean environments for the declared Python versions and the
-supported runtime releases.
+Hosted CI currently omits this API inventory until Alphus is available on PyPI.
+Its native checks still run stubtest, both consumer typing fixtures, packaging,
+and the runtime smoke on the configured exact runtime pin. Before release, run
+the optional Alphus command in clean environments for the declared Python
+versions and supported runtime releases.
 
 These checks provide structural API, type-checking, and selected runtime
 evidence. They do not prove every Markdown rendering behavior or error case.

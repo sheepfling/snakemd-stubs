@@ -1,4 +1,0 @@
-# Shared development/verification tooling; never a consumer runtime dependency.
-alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
--r requirements-verification.txt
--r requirements-compat.txt

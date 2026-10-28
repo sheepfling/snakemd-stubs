@@ -19,24 +19,86 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        target-python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
-      - if: ${{ matrix.target-python == '3.12' }}
-        uses: sheepfling/alphus/ci/quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
-        with:
-          requirements-file: requirements-verification.txt
-          runtime-requirements-file: requirements-compat.txt
-          config-file: quality-gates.toml
-          profile: quality
-      - uses: sheepfling/alphus/ci/stub-quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
+      - uses: actions/setup-python@v5
+        id: checker
         with:
           python-version: "3.12"
-          target-python-version: ${{ matrix.target-python }}
-          requirements-file: requirements-compat.txt
-          target-requirements-file: requirements-target.txt
-          config-file: stub-quality.json
-          with-twine: "true"
+      - uses: actions/setup-python@v5
+        id: target
+        with:
+          python-version: ${{ matrix.target-python }}
+      - name: Create isolated checker and target environments
+        run: |
+          "${{ steps.checker.outputs.python-path }}" -m venv "$RUNNER_TEMP/checker"
+          "${{ steps.target.outputs.python-path }}" -m venv "$RUNNER_TEMP/target"
+          echo "CHECKER_PYTHON=$RUNNER_TEMP/checker/bin/python" >> "$GITHUB_ENV"
+          echo "TARGET_PYTHON=$RUNNER_TEMP/target/bin/python" >> "$GITHUB_ENV"
+      - name: Install native checker tools
+        run: |
+          "$CHECKER_PYTHON" -m pip install --upgrade pip
+          "$CHECKER_PYTHON" -m pip install --group dev
+      - name: Install target runtime and native stubtest tools
+        run: |
+          "$TARGET_PYTHON" -m pip install --upgrade pip
+          "$TARGET_PYTHON" -m pip install --group target
+      - name: Confirm CI does not install or invoke Alphus
+        run: |
+          if rg -n 'uses:[[:space:]]*sheepfling/alphus' .github/workflows/ci.yml; then
+            echo "Hosted CI must not call an Alphus action." >&2
+            exit 1
+          fi
+          "$CHECKER_PYTHON" - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as stream:
+              groups = tomllib.load(stream)["dependency-groups"]
+          for name in ("dev", "target"):
+              assert not any("alphus" in item.casefold() for item in groups[name]), name
+          PY
+          if rg -ni 'alphus-typing-fixtures|alphus-stub-quality|from alphus|import alphus' tests/check_typing_fixtures.py tests/typecheck.py tests/runtime_smoke.py; then
+            echo "Hosted CI inputs must remain independent of Alphus." >&2
+            exit 1
+          fi
+          for python in "$CHECKER_PYTHON" "$TARGET_PYTHON"; do
+            "$python" - <<'PY'
+          import importlib.metadata as metadata
+          import importlib.util
+
+          assert importlib.util.find_spec("alphus") is None
+          try:
+              metadata.distribution("alphus")
+          except metadata.PackageNotFoundError:
+              print("Alphus distribution absent")
+          else:
+              raise AssertionError("Alphus is installed")
+          PY
+          done
+      - name: Repository quality
+        if: ${{ matrix.target-python == '3.12' }}
+        run: |
+          "$CHECKER_PYTHON" -m ruff check .
+          "$CHECKER_PYTHON" -m ruff format --check .
+          "$CHECKER_PYTHON" -m mypy tests/check_typing_fixtures.py
+          mdrepo --root . --set 'orphans.enabled=true' --set 'orphans.roots=["README.md"]' check --summary
+          rumdl --no-config check --disable MD013 --no-cache --color never .
+      - name: Build and validate distributions
+        run: |
+          "$CHECKER_PYTHON" -m build --outdir "$RUNNER_TEMP/dist"
+          "$CHECKER_PYTHON" -m twine check "$RUNNER_TEMP"/dist/*
+          "$TARGET_PYTHON" -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/dist/*.whl
+      - name: Verify installed wheel and run consumer type fixtures
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer"
+          (cd "$RUNNER_TEMP/consumer" && "$TARGET_PYTHON" -c 'from importlib.metadata import distribution; from pathlib import Path; p=Path(distribution("snakemd-stubs").locate_file("snakemd-stubs")).resolve(); assert not p.is_relative_to(Path.cwd().resolve()), p; print(p)')
+          "$CHECKER_PYTHON" -m tests.check_typing_fixtures --target-python "$TARGET_PYTHON"
+          "$TARGET_PYTHON" -m pytest -q
+      - name: Check installed runtime against stubs
+        run: |
+          (cd "$RUNNER_TEMP/consumer" && "$TARGET_PYTHON" -m mypy.stubtest --allowlist "$GITHUB_WORKSPACE/stubtest-allowlist.txt" snakemd)
+          "$TARGET_PYTHON" -m tests.runtime_smoke

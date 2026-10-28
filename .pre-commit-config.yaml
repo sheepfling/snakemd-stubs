@@ -15,13 +15,13 @@ repos:
         always_run: true
       - id: mypy
         name: mypy strict typing
-        entry: python -m mypy tests
+        entry: python -m mypy tests/typecheck.py tests/runtime_smoke.py tests/check_typing_fixtures.py
         language: system
         pass_filenames: false
         always_run: true
       - id: negative-typecheck
         name: Mypy and Pyright reject invalid consumer calls
-        entry: alphus-typing-fixtures --root . --positive-fixture tests/typecheck.py --negative-fixture tests/negative_typecheck.py.fixture --checkers mypy pyright
+        entry: python -m tests.check_typing_fixtures
         language: system
         pass_filenames: false
         always_run: true

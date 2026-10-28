@@ -53,19 +53,22 @@ definitions and are audited against the installed runtime source and wheel.
 
 ## Verification
 
-Use a Python 3.11+ verification environment. Install the package's development
-tools, pinned Alphus tooling and exact runtime pin into it. The `dev` extra
-centralizes the local verification
-tools; hosted CI separates repository quality from target compatibility.
+`pyproject.toml` owns verification dependencies as PEP 735 groups: `dev` for
+native checker and documentation tools, `target` for the exact runtime and
+consumer checks, and `local-alphus` for optional maintainer-side verification.
+Hosted CI installs only `dev` and `target`; it never installs or invokes
+Alphus. The dependency groups use the PEP 735 support in current pip; CI
+upgrades pip before installing them.
 
 ```shell
-python -m pip install ".[dev]" -r requirements-compat.txt
-python -m pip install -r requirements-quality.txt
+python -m pip install --upgrade pip
+python -m pip install --group dev --group target --group local-alphus
 ```
 
 The full local profile uses Alphus as the configured orchestrator, plus the
-available `mdrepo` and `rumdl` tools for Markdown links/graph and style. Install
-Alphus from its checked-out package as described in its README, then run:
+available `mdrepo` and `rumdl` tools for Markdown links/graph and style. The
+`local-alphus` group pins its source revision; install it only when you want
+the optional local gate, then run:
 
 ```shell
 alphus --root . --config quality-gates.toml --run --profile check
@@ -85,19 +88,25 @@ alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
 
-Install the pinned Alphus wheel in the verification environment before this
-command. The
-shared tool configuration and GitHub Action are documented in
-[Alphus's stub-package CI guide][alphus-ci].
+The pinned Alphus group is separate from both native CI groups. Shared tool
+configuration is documented in [Alphus's stub-package CI guide][alphus-ci].
 
 [alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
 
-Hosted CI runs a single compatibility matrix on Python 3.10–3.14, with a
-Python 3.12 checker. The repository-quality action runs on the 3.12 matrix leg;
-the installed-wheel compatibility action runs on every leg. Triggers remain
-merged PRs against `main` and manual dispatch. Opening a PR or pushing its
-branch does not trigger this job. The exact runtime baseline is
-`requirements-compat.txt`.
+Hosted CI is independent of Alphus while Alphus is unpublished on PyPI. The
+merged-PR/manual workflow uses six Python targets (3.10–3.15), with
+a separate Python 3.12 checker environment and isolated runtime targets. It
+runs Ruff lint/format, Mypy on the native consumer helpers, mdrepo and rumdl on
+the 3.12 leg; every target builds and installs the stub wheel, checks positive
+and expected-negative MyPy/Pyright consumer fixtures, runs native stubtest and
+the runtime smoke, and validates the distributions with Twine. Python 3.15
+is a configured compatibility target; it does not change the package's support
+metadata or establish a local 3.15 result. Alphus's
+runtime-to-stub API inventory audit remains available in the optional local
+profile and is omitted from hosted CI until the shared tooling is published.
+Opening or pushing a PR branch does not trigger this workflow. The exact
+SnakeMD runtime baseline for consumer checks is `SnakeMD==2.4.1` in the
+`target` dependency group.
 
 Before release, also check every SnakeMD release inside the supported runtime
 range. Provision each selected runtime into each target venv and invoke the
@@ -123,11 +132,12 @@ The stubs are distributed under the MIT License. See `LICENSE`.
 ### Shared verification tooling
 
 The reusable example runner and AST/API assertions come from the reviewed
-Alphus revision recorded in `requirements-quality.txt`. Install that tooling
+Alphus revision in the `local-alphus` dependency group. Install that tooling
 in a dedicated Python 3.11+ verification environment:
 
 ```shell
-python -m pip install -r requirements-quality.txt
+python -m pip install --upgrade pip
+python -m pip install --group dev --group local-alphus
 alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 
@@ -139,14 +149,15 @@ venv. The target does not install Alphus. For example, after provisioning the
 checker as above, use a Python 3.10 target:
 
 ```shell
+python -m pip install --upgrade pip
 python3.10 -m venv /path/to/target
-/path/to/target/bin/python -m pip install -r requirements-target.txt \
-  -r requirements-compat.txt
+/path/to/target/bin/python -m pip install --group target
+export ALPHUS_TARGET_PYTHON=/path/to/target/bin/python
 alphus-stub-quality --root . --config stub-quality.json \
   --with-twine --target-python /path/to/target/bin/python --report target-result.json
 ```
 
-Repeat with each Python target 3.10–3.14. Both native static checkers explicitly
+Repeat with each Python target 3.10–3.15. Both native static checkers explicitly
 select that target's packages and language version; the JSON report records
 checker/target identities and each executed stage. Failed target checks stop the
 run without falling back to the checker.
@@ -162,10 +173,9 @@ alphus --root . --config quality-gates.toml --run --profile check
 
 Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
 part. The stub stage builds and installs the wheel before later tooling runs.
-Hosted CI runs the shared `ci/stub-quality` action once per target 3.10–3.14,
-using checker Python 3.12. On the Python 3.12 leg, the repository-quality action
-runs before installed-wheel verification in that same job. It runs only after a
-merged PR or manual dispatch. Both action references and
-`requirements-quality.txt` pin the same immutable Alphus commit. Each
-repository retains its native tool settings, examples and API expectations;
-Alphus owns the repeated checking mechanisms and their regression tests.
+These instructions are for optional local verification. Hosted CI does not
+install the Git-based Alphus pin or call its actions; it uses the repository's
+native Python tools and fixture runner until Alphus is published on PyPI.
+The installed-wheel API audit is therefore a local optional gate, while native
+stubtest, consumer fixtures, and runtime smoke remain in the merged/manual CI
+workflow.
