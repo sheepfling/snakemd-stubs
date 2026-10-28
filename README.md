@@ -92,10 +92,11 @@ shared tool configuration and GitHub Action are documented in
 
 [alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
 
-Hosted CI separates one repository-quality job from installed-wheel target
-compatibility on Python 3.10–3.14, with a Python 3.12 checker. Triggers remain
-merged PRs against `main` and manual dispatch. Opening a PR or pushing its branch
-does not trigger these jobs. The exact runtime baseline is
+Hosted CI runs a single compatibility matrix on Python 3.10–3.14, with a
+Python 3.12 checker. The repository-quality action runs on the 3.12 matrix leg;
+the installed-wheel compatibility action runs on every leg. Triggers remain
+merged PRs against `main` and manual dispatch. Opening a PR or pushing its
+branch does not trigger this job. The exact runtime baseline is
 `requirements-compat.txt`.
 
 Before release, also check every SnakeMD release inside the supported runtime
@@ -161,9 +162,10 @@ alphus --root . --config quality-gates.toml --run --profile check
 
 Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
 part. The stub stage builds and installs the wheel before later tooling runs.
-Hosted CI runs `quality` (`python` plus `markdown`) once and the shared
-`ci/stub-quality` action once per target 3.10–3.14, using checker Python 3.12.
-It runs only after a merged PR or manual dispatch. Both action references and
+Hosted CI runs the shared `ci/stub-quality` action once per target 3.10–3.14,
+using checker Python 3.12. On the Python 3.12 leg, the repository-quality action
+runs before installed-wheel verification in that same job. It runs only after a
+merged PR or manual dispatch. Both action references and
 `requirements-quality.txt` pin the same immutable Alphus commit. Each
 repository retains its native tool settings, examples and API expectations;
 Alphus owns the repeated checking mechanisms and their regression tests.

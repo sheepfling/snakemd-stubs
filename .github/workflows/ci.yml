@@ -12,25 +12,10 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-          fetch-depth: 0
-      - uses: sheepfling/alphus/ci/quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
-        with:
-          requirements-file: requirements-verification.txt
-          runtime-requirements-file: requirements-compat.txt
-          config-file: quality-gates.toml
-          profile: quality
-
   compatibility:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +25,13 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
+      - if: ${{ matrix.target-python == '3.12' }}
+        uses: sheepfling/alphus/ci/quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
+        with:
+          requirements-file: requirements-verification.txt
+          runtime-requirements-file: requirements-compat.txt
+          config-file: quality-gates.toml
+          profile: quality
       - uses: sheepfling/alphus/ci/stub-quality@b4b6055a6ae0286912b461cd2b4262b3318c5a0c
         with:
           python-version: "3.12"
