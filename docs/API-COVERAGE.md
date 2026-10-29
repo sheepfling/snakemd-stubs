@@ -32,6 +32,11 @@ stubtest compares the installed stub wheel with the runtime.
 
 The annotations have three narrow accommodations that reflect runtime behavior:
 
+These are explicit differences from the runtime's own annotations: its two
+path parameters are declared as `str` even though the implementations pass
+them to `open`, which accepts path-like values; and `Inline.get_link` is
+annotated as `str` even though an unlinked instance returns `None`.
+
 - `Document.add_table_from_csv(path: str | os.PathLike[str]) -> CSVTable` accepts
   path-like inputs because its implementation passes `path` to `open`.
 - `CSVTable.__init__(path: str | os.PathLike[str], encoding="utf-8") -> None`
@@ -45,10 +50,12 @@ annotation checks strict.
 ## Run and limits
 
 Run the optional local compatibility check from the repository root after
-installing the `dev` and `local-alphus` dependency groups and provisioning a
-target environment from the `target` group:
+installing native tools from the `dev` and `target` groups and explicitly
+installing the experimental Alphus Git dependency in that optional environment:
 
 ```shell
+python -m pip install --group dev --group target
+python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
 alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```

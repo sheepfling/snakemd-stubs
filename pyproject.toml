@@ -49,10 +49,6 @@ target = [
     "typing_extensions>=4.0",
     "SnakeMD==2.4.1",
 ]
-local-alphus = [
-    "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c",
-]
-
 [project.urls]
 Repository = "https://github.com/sheepfling/snakemd-stubs"
 Issues = "https://github.com/sheepfling/snakemd-stubs/issues"

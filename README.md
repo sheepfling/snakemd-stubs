@@ -54,25 +54,39 @@ definitions and are audited against the installed runtime source and wheel.
 ## Verification
 
 `pyproject.toml` owns verification dependencies as PEP 735 groups: `dev` for
-native checker and documentation tools, `target` for the exact runtime and
-consumer checks, and `local-alphus` for optional maintainer-side verification.
-Hosted CI installs only `dev` and `target`; it never installs or invokes
-Alphus. The dependency groups use the PEP 735 support in current pip; CI
-upgrades pip before installing them.
+native checker and documentation tools, and `target` for the exact runtime and
+consumer checks. Hosted CI installs these groups only; it never installs or
+invokes Alphus. The dependency groups use the PEP 735 support in current pip;
+CI upgrades pip before installing them.
 
 ```shell
 python -m pip install --upgrade pip
-python -m pip install --group dev --group target --group local-alphus
+python -m pip install --group dev --group target
 ```
 
-The full local profile uses Alphus as the configured orchestrator, plus the
-available `mdrepo` and `rumdl` tools for Markdown links/graph and style. The
-`local-alphus` group pins its source revision; install it only when you want
-the optional local gate, then run:
+This is the ordinary native development and test setup. It selects only the
+`dev` and `target` groups and does not request Alphus. For an experimental
+maintainer-side audit, install the pinned Alphus Git revision directly in a
+separate environment; this optional tool is deliberately not declared in
+`pyproject.toml`:
 
 ```shell
+python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
 alphus --root . --config quality-gates.toml --run --profile check
 ```
+
+Because the Alphus Git URL is not in project metadata or dependency groups,
+uv's project lock and sync commands have no Alphus source to resolve. uv is not
+installed in the validation environment, so that behavior was assessed from
+the repository metadata and uv documentation, not tested directly. uv resolves
+all declared dependency groups when creating a lockfile and may lock before
+sync/run if the lock is absent or stale; keeping Alphus outside the project
+dependency graph prevents those normal project operations from requesting it.
+See uv's [dependency-group resolution] documentation and [automatic lock
+behavior].
+
+[dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
+[automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
 
 The project owns `quality-gates.toml`; it calls Alphus's existing rules rather
 than copying their implementations. Alphus's installed CLI entry points provide
@@ -88,8 +102,9 @@ alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
 
-The pinned Alphus group is separate from both native CI groups. Shared tool
-configuration is documented in [Alphus's stub-package CI guide][alphus-ci].
+The optional direct Alphus install is separate from both native CI groups.
+Shared tool configuration is documented in [Alphus's stub-package CI
+guide][alphus-ci].
 
 [alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
 
@@ -132,12 +147,15 @@ The stubs are distributed under the MIT License. See `LICENSE`.
 ### Shared verification tooling
 
 The reusable example runner and AST/API assertions come from the reviewed
-Alphus revision in the `local-alphus` dependency group. Install that tooling
-in a dedicated Python 3.11+ verification environment:
+Alphus revision. Install it only for an experimental audit in a dedicated
+Python 3.11+ verification environment; the Git dependency is intentionally
+outside `pyproject.toml` so native development setup and project locking do not
+resolve it:
 
 ```shell
 python -m pip install --upgrade pip
-python -m pip install --group dev --group local-alphus
+python -m pip install --group dev --group target
+python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
 alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 

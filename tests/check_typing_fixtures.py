@@ -8,8 +8,77 @@ import re
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import cast
+
+SUPPORTED_CHECKERS = frozenset({"mypy", "pyright"})
+
+
+@dataclass(frozen=True)
+class FixtureConfig:
+    positive_fixture: Path
+    negative_fixture: Path
+    typing_checkers: tuple[str, ...]
+    negative_expected_count: int | None
+    mypy_diagnostics: tuple[str, ...]
+    pyright_diagnostics: tuple[str, ...]
+
+
+def _mapping(value: object, label: str) -> dict[str, object]:
+    if not isinstance(value, dict) or any(not isinstance(key, str) for key in value):
+        raise ValueError(f"{label} must be an object with string keys")
+    return cast(dict[str, object], value)
+
+
+def _fixture_path(verification: dict[str, object], field: str) -> Path:
+    value = verification.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"verification.{field} must be a non-empty relative path")
+    path = Path(value)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"verification.{field} must stay inside the repository")
+    return path
+
+
+def _diagnostic_messages(verification: dict[str, object], checker: str) -> tuple[str, ...]:
+    value = verification.get(f"{checker}_diagnostics", [])
+    if not isinstance(value, list) or any(
+        not isinstance(message, str) or not message.strip() for message in value
+    ):
+        raise ValueError(f"verification.{checker}_diagnostics must be a list of strings")
+    return tuple(cast(list[str], value))
+
+
+def _parse_config(document: object) -> FixtureConfig:
+    root = _mapping(document, "stub-quality.json")
+    verification = _mapping(root.get("verification"), "verification")
+    checkers = verification.get("typing_checkers", ["mypy", "pyright"])
+    if (
+        not isinstance(checkers, list)
+        or not checkers
+        or any(
+            not isinstance(checker, str) or checker not in SUPPORTED_CHECKERS
+            for checker in checkers
+        )
+        or len(set(checkers)) != len(checkers)
+    ):
+        raise ValueError("verification.typing_checkers must list mypy and/or pyright once each")
+    expected_count = verification.get("negative_expected_count")
+    if expected_count is not None and (
+        not isinstance(expected_count, int)
+        or isinstance(expected_count, bool)
+        or expected_count < 1
+    ):
+        raise ValueError("verification.negative_expected_count must be a positive integer")
+    return FixtureConfig(
+        positive_fixture=_fixture_path(verification, "positive_fixture"),
+        negative_fixture=_fixture_path(verification, "negative_fixture"),
+        typing_checkers=tuple(cast(list[str], checkers)),
+        negative_expected_count=expected_count,
+        mypy_diagnostics=_diagnostic_messages(verification, "mypy"),
+        pyright_diagnostics=_diagnostic_messages(verification, "pyright"),
+    )
 
 
 def _target_version(target_python: Path) -> str:
@@ -80,7 +149,7 @@ def _run(checker: str, fixture: Path, config: Path, target: Path, version: str) 
 
 
 def _expected_errors(
-    root: Path, negative: Path, config: dict[str, Any], checker: str
+    negative: Path, config: FixtureConfig, checker: str
 ) -> tuple[set[int] | None, int | None, list[str]]:
     lines = {
         number
@@ -89,22 +158,20 @@ def _expected_errors(
     }
     if lines:
         return lines, None, []
-    verification = config.get("verification", {})
-    expected_count = verification.get("negative_expected_count")
-    if not isinstance(expected_count, int) or expected_count < 1:
+    if config.negative_expected_count is None:
         raise ValueError(
             "negative fixture must use # expect-error markers or set negative_expected_count"
         )
-    diagnostics = verification.get(f"{checker}_diagnostics", [])
-    if not isinstance(diagnostics, list) or any(not isinstance(item, str) for item in diagnostics):
-        raise ValueError(f"{checker}_diagnostics must be a list of strings")
-    return None, expected_count, diagnostics
+    diagnostics = config.mypy_diagnostics if checker == "mypy" else config.pyright_diagnostics
+    return None, config.negative_expected_count, list(diagnostics)
 
 
-def _check(root: Path, config: dict[str, Any], checker: str, target: Path, version: str) -> bool:
-    verification = config.get("verification", {})
-    positive = (root / verification["positive_fixture"]).resolve()
-    negative = (root / verification["negative_fixture"]).resolve()
+def _check(root: Path, config: FixtureConfig, checker: str, target: Path, version: str) -> bool:
+    repository = root.resolve()
+    positive = (repository / config.positive_fixture).resolve()
+    negative = (repository / config.negative_fixture).resolve()
+    if not positive.is_relative_to(repository) or not negative.is_relative_to(repository):
+        raise ValueError("configured typing fixtures must stay inside the repository")
     if not positive.is_file() or not negative.is_file():
         raise ValueError("configured positive or negative typing fixture is missing")
 
@@ -117,9 +184,7 @@ def _check(root: Path, config: dict[str, Any], checker: str, target: Path, versi
         return False
     print(f"PASS {checker} positive fixture for Python {version}")
 
-    expected_lines, expected_count, expected_messages = _expected_errors(
-        root, negative, config, checker
-    )
+    expected_lines, expected_count, expected_messages = _expected_errors(negative, config, checker)
     negative_status, negative_output = _run(
         checker, negative, root / "pyproject.toml", target, version
     )
@@ -170,16 +235,9 @@ def main() -> int:
     target = args.target_python.expanduser().absolute()
     config_path = root / "stub-quality.json"
     try:
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config = _parse_config(json.loads(config_path.read_text(encoding="utf-8")))
         version = _target_version(target)
-        checkers = config["verification"].get("typing_checkers", ["mypy", "pyright"])
-        if (
-            not isinstance(checkers, list)
-            or not checkers
-            or any(checker not in {"mypy", "pyright"} for checker in checkers)
-        ):
-            raise ValueError("typing_checkers must contain mypy and/or pyright")
-        for checker in checkers:
+        for checker in config.typing_checkers:
             if not _check(root, config, checker, target, version):
                 return 1
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:

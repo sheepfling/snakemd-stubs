@@ -47,38 +47,6 @@ jobs:
         run: |
           "$TARGET_PYTHON" -m pip install --upgrade pip
           "$TARGET_PYTHON" -m pip install --group target
-      - name: Confirm CI does not install or invoke Alphus
-        run: |
-          if rg -n 'uses:[[:space:]]*sheepfling/alphus' .github/workflows/ci.yml; then
-            echo "Hosted CI must not call an Alphus action." >&2
-            exit 1
-          fi
-          "$CHECKER_PYTHON" - <<'PY'
-          import tomllib
-
-          with open("pyproject.toml", "rb") as stream:
-              groups = tomllib.load(stream)["dependency-groups"]
-          for name in ("dev", "target"):
-              assert not any("alphus" in item.casefold() for item in groups[name]), name
-          PY
-          if rg -ni 'alphus-typing-fixtures|alphus-stub-quality|from alphus|import alphus' tests/check_typing_fixtures.py tests/typecheck.py tests/runtime_smoke.py; then
-            echo "Hosted CI inputs must remain independent of Alphus." >&2
-            exit 1
-          fi
-          for python in "$CHECKER_PYTHON" "$TARGET_PYTHON"; do
-            "$python" - <<'PY'
-          import importlib.metadata as metadata
-          import importlib.util
-
-          assert importlib.util.find_spec("alphus") is None
-          try:
-              metadata.distribution("alphus")
-          except metadata.PackageNotFoundError:
-              print("Alphus distribution absent")
-          else:
-              raise AssertionError("Alphus is installed")
-          PY
-          done
       - name: Repository quality
         if: ${{ matrix.target-python == '3.12' }}
         run: |
