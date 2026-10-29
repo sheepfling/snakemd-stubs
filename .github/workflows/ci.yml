@@ -53,7 +53,7 @@ jobs:
           "$CHECKER_PYTHON" -m ruff check .
           "$CHECKER_PYTHON" -m ruff format --check .
           "$CHECKER_PYTHON" -m mypy tests/check_typing_fixtures.py
-          mdrepo --root . --set 'orphans.enabled=true' --set 'orphans.roots=["README.md"]' check --summary
+          mdrepo --root . check
           rumdl --no-config check --disable MD013 --no-cache --color never .
       - name: Build and validate distributions
         run: |

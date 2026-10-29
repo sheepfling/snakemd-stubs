@@ -64,6 +64,12 @@ python -m pip install --upgrade pip
 python -m pip install --group dev --group target
 ```
 
+The native typing-fixture runner validates the fixture configuration, requires
+fixture paths to stay inside the repository, and checks both positive and
+expected-negative calls under MyPy and Pyright. Pytest covers valid and invalid
+configuration values; the runtime smoke keeps package-specific behavior in a
+separate `main()` entry point.
+
 This is the ordinary native development and test setup. It selects only the
 `dev` and `target` groups and does not request Alphus. For an experimental
 maintainer-side audit, install the pinned Alphus Git revision directly in a
