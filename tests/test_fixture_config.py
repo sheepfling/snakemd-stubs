@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from tests import check_typing_fixtures
 from tests.check_typing_fixtures import (
     FixtureConfig,
     _command,
@@ -59,7 +60,15 @@ def test_parse_config_rejects_invalid_values(field: str, value: object, message:
         _parse_config(document)
 
 
-def test_ty_command_uses_installed_target_python_and_project_config() -> None:
+def test_ty_command_uses_installed_target_python_and_project_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def find_checker(name: str, path: str) -> str:
+        assert name == "ty"
+        assert Path(path) == Path(sys.executable).parent
+        return str(Path(path) / "ty")
+
+    monkeypatch.setattr(check_typing_fixtures.shutil, "which", find_checker)
     command = _command(
         "ty",
         Path("tests/typecheck.py"),
@@ -68,7 +77,7 @@ def test_ty_command_uses_installed_target_python_and_project_config() -> None:
         "3.15",
     )
 
-    assert Path(command[0]).parent == Path(sys.executable).parent
+    assert command[0] == str(Path(sys.executable).parent / "ty")
     assert Path(command[0]).name.startswith("ty")
     assert command[1:3] == ["check", "--project"]
     assert command[3] == "/repo"
