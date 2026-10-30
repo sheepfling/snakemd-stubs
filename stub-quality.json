@@ -7,7 +7,8 @@
     "negative_fixture": "tests/negative_typecheck.py.fixture",
     "typing_checkers": [
       "mypy",
-      "pyright"
+      "pyright",
+      "ty"
     ],
     "runtime_smoke_module": "tests.runtime_smoke"
   }

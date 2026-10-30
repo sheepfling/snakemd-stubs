@@ -1,10 +1,11 @@
-"""Run positive and expected-negative fixtures with native Mypy and Pyright."""
+"""Run positive and expected-negative fixtures with native Mypy, Pyright, and ty."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -12,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-SUPPORTED_CHECKERS = frozenset({"mypy", "pyright"})
+SUPPORTED_CHECKERS = frozenset({"mypy", "pyright", "ty"})
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class FixtureConfig:
     negative_expected_count: int | None
     mypy_diagnostics: tuple[str, ...]
     pyright_diagnostics: tuple[str, ...]
+    ty_diagnostics: tuple[str, ...]
 
 
 def _mapping(value: object, label: str) -> dict[str, object]:
@@ -53,7 +55,7 @@ def _diagnostic_messages(verification: dict[str, object], checker: str) -> tuple
 def _parse_config(document: object) -> FixtureConfig:
     root = _mapping(document, "stub-quality.json")
     verification = _mapping(root.get("verification"), "verification")
-    checkers = verification.get("typing_checkers", ["mypy", "pyright"])
+    checkers = verification.get("typing_checkers", ["mypy", "pyright", "ty"])
     if (
         not isinstance(checkers, list)
         or not checkers
@@ -63,7 +65,9 @@ def _parse_config(document: object) -> FixtureConfig:
         )
         or len(set(checkers)) != len(checkers)
     ):
-        raise ValueError("verification.typing_checkers must list mypy and/or pyright once each")
+        raise ValueError(
+            "verification.typing_checkers must list mypy, pyright, and/or ty once each"
+        )
     expected_count = verification.get("negative_expected_count")
     if expected_count is not None and (
         not isinstance(expected_count, int)
@@ -78,6 +82,7 @@ def _parse_config(document: object) -> FixtureConfig:
         negative_expected_count=expected_count,
         mypy_diagnostics=_diagnostic_messages(verification, "mypy"),
         pyright_diagnostics=_diagnostic_messages(verification, "pyright"),
+        ty_diagnostics=_diagnostic_messages(verification, "ty"),
     )
 
 
@@ -111,7 +116,7 @@ def _command(
                 "--no-incremental",
             )
         )
-    else:
+    elif checker == "pyright":
         command.extend(
             (
                 "--project",
@@ -122,12 +127,39 @@ def _command(
                 version,
             )
         )
+    else:
+        checker_environment = Path(sys.executable).parent
+        ty_executable = shutil.which("ty", path=str(checker_environment))
+        if ty_executable is None:
+            raise FileNotFoundError(
+                f"ty CLI is not installed in checker environment {checker_environment}"
+            )
+        command = [
+            ty_executable,
+            "check",
+            "--project",
+            str(config.parent),
+            "--python",
+            str(target_python),
+            "--python-version",
+            version,
+            "--output-format",
+            "concise",
+            "--color",
+            "never",
+            "--no-progress",
+        ]
     command.append(str(fixture))
     return command
 
 
 def _diagnostic_lines(checker: str, output: str, fixture_name: str) -> dict[int, list[str]]:
-    pattern = r"^.*?:(\d+): error:" if checker == "mypy" else r"^.*?:(\d+):\d+ - error:"
+    if checker == "mypy":
+        pattern = r"^.*?:(\d+): error:"
+    elif checker == "pyright":
+        pattern = r"^.*?:(\d+):\d+ - error:"
+    else:
+        pattern = r"^.*?:(\d+):\d+:\s+error(?:\[[^]]+\])?"
     diagnostics: dict[int, list[str]] = {}
     for line in output.splitlines():
         match = re.search(pattern, line)
@@ -162,7 +194,7 @@ def _expected_errors(
         raise ValueError(
             "negative fixture must use # expect-error markers or set negative_expected_count"
         )
-    diagnostics = config.mypy_diagnostics if checker == "mypy" else config.pyright_diagnostics
+    diagnostics = getattr(config, f"{checker}_diagnostics")
     return None, config.negative_expected_count, list(diagnostics)
 
 

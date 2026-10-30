@@ -66,8 +66,8 @@ python -m pip install --group dev --group target
 
 The native typing-fixture runner validates the fixture configuration, requires
 fixture paths to stay inside the repository, and checks both positive and
-expected-negative calls under MyPy and Pyright. Pytest covers valid and invalid
-configuration values; the runtime smoke keeps package-specific behavior in a
+expected-negative calls under MyPy, Pyright, and ty. Pytest covers valid and
+invalid configuration values; the runtime smoke keeps package-specific behavior in a
 separate `main()` entry point.
 
 This is the ordinary native development and test setup. It selects only the
@@ -117,7 +117,7 @@ merged-PR/manual workflow uses six Python targets (3.10–3.15), with
 a separate Python 3.12 checker environment and isolated runtime targets. It
 runs Ruff lint/format, Mypy on the native consumer helpers, mdrepo and rumdl on
 the 3.12 leg; every target builds and installs the stub wheel, checks positive
-and expected-negative MyPy/Pyright consumer fixtures, runs native stubtest and
+and expected-negative MyPy/Pyright/ty consumer fixtures, runs native stubtest and
 the runtime smoke, and validates the distributions with Twine. Python 3.15
 is a configured compatibility target. A local CPython 3.15.2 check also passed
 the installed-wheel consumer typing fixtures and runtime smoke against
@@ -166,7 +166,7 @@ alphus-stub-quality --root . --config stub-quality.json --with-twine
 
 For an unpublished local candidate, install its built Alphus wheel instead of
 the Git requirement. The consumer wheel has no Alphus runtime dependency.
-Alphus and native Mypy/Pyright run in a Python 3.11+ checker environment.
+Alphus and native Mypy/Pyright/ty run in a Python 3.11+ checker environment.
 Build/install, API audit, native stubtest and smoke execute in a distinct target
 venv. The target does not install Alphus. For example, after provisioning the
 checker as above, use a Python 3.10 target:
@@ -180,7 +180,7 @@ alphus-stub-quality --root . --config stub-quality.json \
   --with-twine --target-python /path/to/target/bin/python --report target-result.json
 ```
 
-Repeat with each Python target 3.10–3.15. Both native static checkers explicitly
+Repeat with each Python target 3.10–3.15. All three native type checkers explicitly
 select that target's packages and language version; the JSON report records
 checker/target identities and each executed stage. Failed target checks stop the
 run without falling back to the checker.

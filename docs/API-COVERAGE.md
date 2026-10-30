@@ -26,7 +26,7 @@ the supported facade and runtime implementation bindings.
 
 `tests/typecheck.py` exercises the supported API with positive consumer calls.
 The negative fixture verifies that unsupported names, values, and abstract
-class instantiations are rejected by both Mypy and Pyright. The runtime smoke
+class instantiations are rejected by Mypy, Pyright, and ty. The runtime smoke
 executes the consumer fixture and checks that rendered output can be written;
 stubtest compares the installed stub wheel with the runtime.
 
