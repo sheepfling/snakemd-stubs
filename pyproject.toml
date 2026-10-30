@@ -24,16 +24,35 @@ classifiers = [
     "Typing :: Stubs Only",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "build>=1.2",
+    "mdrepo>=0.0.1.post0",
     "mypy>=2.3",
     "pre-commit>=4.0",
     "pyright>=1.1.414",
+    "pytest>=7.4",
     "ruff>=0.16",
+    "rumdl>=0.2.77",
+    "ty>=0.0.95",
+    "setuptools>=80",
+    "setuptools-scm>=9.2",
     "twine>=7.0",
+    "wheel",
 ]
-
+target = [
+    "build>=1.2",
+    "mypy>=2.3",
+    "pytest>=7.4",
+    "setuptools>=80",
+    "setuptools-scm>=9.2",
+    "wheel",
+    "typing_extensions>=4.0",
+    "SnakeMD==2.4.1",
+]
+dev-experimental = [
+    "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c",
+]
 [project.urls]
 Repository = "https://github.com/sheepfling/snakemd-stubs"
 Issues = "https://github.com/sheepfling/snakemd-stubs/issues"
@@ -54,8 +73,10 @@ local_scheme = "no-local-version"
 python_version = "3.10"
 strict = true
 
+# Scope Pyright to the installed-package consumer fixture; audit/test helpers
+# have separate checks and are not part of the public type-consumer probe.
 [tool.pyright]
-include = ["tests"]
+include = ["tests/typecheck.py"]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
 reportMissingModuleSource = "none"

@@ -1,44 +1,72 @@
 name: CI
 
 on:
-  push:
   pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  type-check:
+  compatibility:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        snakemd-version: ["2.4.0", "2.4.1"]
+        target-python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
+        id: checker
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install ".[dev]" "SnakeMD==${{ matrix.snakemd-version }}"
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy tests
-      - run: pyright
-      - run: stubtest --allowlist stubtest-allowlist.txt snakemd
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
+        id: target
         with:
-          python-version: "3.12"
-      - run: python -m pip install --upgrade pip build
-      - run: python -m build
-      - run: python -m pip install --upgrade twine
-      - run: twine check dist/*
+          python-version: ${{ matrix.target-python }}
+      - name: Create isolated checker and target environments
+        run: |
+          "${{ steps.checker.outputs.python-path }}" -m venv "$RUNNER_TEMP/checker"
+          "${{ steps.target.outputs.python-path }}" -m venv "$RUNNER_TEMP/target"
+          echo "CHECKER_PYTHON=$RUNNER_TEMP/checker/bin/python" >> "$GITHUB_ENV"
+          echo "TARGET_PYTHON=$RUNNER_TEMP/target/bin/python" >> "$GITHUB_ENV"
+      - name: Install native checker tools
+        run: |
+          "$CHECKER_PYTHON" -m pip install --upgrade pip
+          "$CHECKER_PYTHON" -m pip install --group dev
+      - name: Install target runtime and native stubtest tools
+        run: |
+          "$TARGET_PYTHON" -m pip install --upgrade pip
+          "$TARGET_PYTHON" -m pip install --group target
+      - name: Repository quality
+        if: ${{ matrix.target-python == '3.12' }}
+        run: |
+          "$CHECKER_PYTHON" -m ruff check .
+          "$CHECKER_PYTHON" -m ruff format --check .
+          "$CHECKER_PYTHON" -m mypy tests/check_typing_fixtures.py
+          "$RUNNER_TEMP/checker/bin/mdrepo" --root . check
+          "$RUNNER_TEMP/checker/bin/rumdl" --no-config check --disable MD013 --no-cache --color never .
+      - name: Build and validate distributions
+        run: |
+          "$CHECKER_PYTHON" -m build --outdir "$RUNNER_TEMP/dist"
+          "$CHECKER_PYTHON" -m twine check "$RUNNER_TEMP"/dist/*
+          "$TARGET_PYTHON" -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/dist/*.whl
+      - name: Verify installed wheel and run consumer type fixtures
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer"
+          (cd "$RUNNER_TEMP/consumer" && "$TARGET_PYTHON" -c 'from importlib.metadata import distribution; from pathlib import Path; p=Path(distribution("snakemd-stubs").locate_file("snakemd-stubs")).resolve(); assert not p.is_relative_to(Path.cwd().resolve()), p; print(p)')
+          "$CHECKER_PYTHON" -m tests.check_typing_fixtures --target-python "$TARGET_PYTHON"
+          "$TARGET_PYTHON" -m pytest -q
+      - name: Check installed runtime against stubs
+        run: |
+          (cd "$RUNNER_TEMP/consumer" && "$TARGET_PYTHON" -m mypy.stubtest --allowlist "$GITHUB_WORKSPACE/stubtest-allowlist.txt" snakemd)
+          "$TARGET_PYTHON" -m tests.runtime_smoke
