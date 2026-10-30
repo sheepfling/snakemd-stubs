@@ -119,8 +119,10 @@ runs Ruff lint/format, Mypy on the native consumer helpers, mdrepo and rumdl on
 the 3.12 leg; every target builds and installs the stub wheel, checks positive
 and expected-negative MyPy/Pyright consumer fixtures, runs native stubtest and
 the runtime smoke, and validates the distributions with Twine. Python 3.15
-is a configured compatibility target; it does not change the package's support
-metadata or establish a local 3.15 result. Alphus's
+is a configured compatibility target. A local CPython 3.15.2 check also passed
+the installed-wheel consumer typing fixtures and runtime smoke against
+SnakeMD 2.4.1; this does not establish a hosted matrix run, change support
+metadata, or prove every release in the supported range. Alphus's
 runtime-to-stub API inventory audit remains available in the optional local
 profile and is omitted from hosted CI until the shared tooling is published.
 Opening or pushing a PR branch does not trigger this workflow. The exact
