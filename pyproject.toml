@@ -27,13 +27,13 @@ classifiers = [
 [dependency-groups]
 dev = [
     "build>=1.2",
-    "mdrepo==0.0.1.post0",
+    "mdrepo>=0.0.1.post0",
     "mypy>=2.3",
     "pre-commit>=4.0",
     "pyright>=1.1.414",
     "pytest>=7.4",
     "ruff>=0.16",
-    "rumdl==0.2.77",
+    "rumdl>=0.2.77",
     "setuptools>=80",
     "setuptools-scm>=9.2",
     "twine>=7.0",
@@ -48,6 +48,9 @@ target = [
     "wheel",
     "typing_extensions>=4.0",
     "SnakeMD==2.4.1",
+]
+dev-experimental = [
+    "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c",
 ]
 [project.urls]
 Repository = "https://github.com/sheepfling/snakemd-stubs"

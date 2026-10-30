@@ -72,22 +72,20 @@ separate `main()` entry point.
 
 This is the ordinary native development and test setup. It selects only the
 `dev` and `target` groups and does not request Alphus. For an experimental
-maintainer-side audit, install the pinned Alphus Git revision directly in a
-separate environment; this optional tool is deliberately not declared in
-`pyproject.toml`:
+maintainer-side audit, install the separately named `dev-experimental` group
+in a separate environment:
 
 ```shell
-python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
+python -m pip install --group dev-experimental
 alphus --root . --config quality-gates.toml --run --profile check
 ```
 
-Because the Alphus Git URL is not in project metadata or dependency groups,
-uv's project lock and sync commands have no Alphus source to resolve. uv is not
-installed in the validation environment, so that behavior was assessed from
-the repository metadata and uv documentation, not tested directly. uv resolves
-all declared dependency groups when creating a lockfile and may lock before
-sync/run if the lock is absent or stale; keeping Alphus outside the project
-dependency graph prevents those normal project operations from requesting it.
+The `dev-experimental` group is excluded from the ordinary pip install above
+and from hosted CI. It contains a Git dependency and may be unavailable when
+Git access is blocked. uv resolves all declared dependency groups when creating
+or refreshing a lockfile, even when a later sync selects only `dev`; therefore
+`uv lock` may require Git access to this experimental group. uv was not
+available in the validation environment, so its behavior was not tested here.
 See uv's [dependency-group resolution] documentation and [automatic lock
 behavior].
 
@@ -108,7 +106,7 @@ alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
 
-The optional direct Alphus install is separate from both native CI groups.
+The optional `dev-experimental` group is separate from both native CI groups.
 Shared tool configuration is documented in [Alphus's stub-package CI
 guide][alphus-ci].
 
@@ -154,14 +152,13 @@ The stubs are distributed under the MIT License. See `LICENSE`.
 
 The reusable example runner and AST/API assertions come from the reviewed
 Alphus revision. Install it only for an experimental audit in a dedicated
-Python 3.11+ verification environment; the Git dependency is intentionally
-outside `pyproject.toml` so native development setup and project locking do not
-resolve it:
+Python 3.11+ verification environment; the Git dependency is isolated in the
+`dev-experimental` group and is not used by native development or CI:
 
 ```shell
 python -m pip install --upgrade pip
 python -m pip install --group dev --group target
-python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
+python -m pip install --group dev-experimental
 alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 

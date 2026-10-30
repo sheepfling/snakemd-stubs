@@ -51,11 +51,11 @@ annotation checks strict.
 
 Run the optional local compatibility check from the repository root after
 installing native tools from the `dev` and `target` groups and explicitly
-installing the experimental Alphus Git dependency in that optional environment:
+installing the `dev-experimental` group in that optional environment:
 
 ```shell
 python -m pip install --group dev --group target
-python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
+python -m pip install --group dev-experimental
 alphus-stub-quality \
   --root . --config stub-quality.json --with-twine
 ```
