@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80", "setuptools-scm>=9.2", "wheel"]
+requires = ["setuptools>=80", "setuptools-scm>=10", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -36,7 +36,7 @@ dev = [
     "rumdl>=0.2.77",
     "ty>=0.0.95",
     "setuptools>=80",
-    "setuptools-scm>=9.2",
+    "setuptools-scm>=10",
     "twine>=7.0",
     "wheel",
 ]
@@ -45,7 +45,7 @@ target = [
     "mypy>=2.3",
     "pytest>=7.4",
     "setuptools>=80",
-    "setuptools-scm>=9.2",
+    "setuptools-scm>=10",
     "wheel",
     "typing_extensions>=4.0",
     "SnakeMD==2.4.1",
@@ -66,8 +66,11 @@ packages = ["snakemd-stubs"]
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
-version_scheme = "release-branch-semver"
+version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"
+
+[tool.setuptools_scm.tag]
+regex = '^v(?P<version>(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){3})$'
 
 [tool.mypy]
 python_version = "3.10"

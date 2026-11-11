@@ -52,7 +52,7 @@ def _diagnostic_messages(verification: dict[str, object], checker: str) -> tuple
     return tuple(cast(list[str], value))
 
 
-def _parse_config(document: object) -> FixtureConfig:
+def _parse_config(document: object, required_checkers: tuple[str, ...] = ()) -> FixtureConfig:
     root = _mapping(document, "stub-quality.json")
     verification = _mapping(root.get("verification"), "verification")
     checkers = verification.get("typing_checkers", ["mypy", "pyright", "ty"])
@@ -67,6 +67,12 @@ def _parse_config(document: object) -> FixtureConfig:
     ):
         raise ValueError(
             "verification.typing_checkers must list mypy, pyright, and/or ty once each"
+        )
+    missing_checkers = [checker for checker in required_checkers if checker not in checkers]
+    if missing_checkers:
+        raise ValueError(
+            "verification.typing_checkers is missing required checkers: "
+            + ", ".join(missing_checkers)
         )
     expected_count = verification.get("negative_expected_count")
     if expected_count is not None and (
@@ -262,12 +268,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--target-python", type=Path, default=Path(sys.executable))
+    parser.add_argument(
+        "--require-checker",
+        action="append",
+        choices=sorted(SUPPORTED_CHECKERS),
+        default=[],
+        help="fail if stub-quality.json does not enable this checker",
+    )
     args = parser.parse_args()
     root = args.root.expanduser().resolve()
     target = args.target_python.expanduser().absolute()
     config_path = root / "stub-quality.json"
     try:
-        config = _parse_config(json.loads(config_path.read_text(encoding="utf-8")))
+        config = _parse_config(
+            json.loads(config_path.read_text(encoding="utf-8")), tuple(args.require_checker)
+        )
         version = _target_version(target)
         for checker in config.typing_checkers:
             if not _check(root, config, checker, target, version):

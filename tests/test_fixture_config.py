@@ -38,6 +38,21 @@ def test_parse_config_returns_validated_fixture_config() -> None:
     assert config.ty_diagnostics == ("Expected `str`, found `Literal[42]`",)
 
 
+def test_parse_config_requires_all_ci_checkers() -> None:
+    config = _parse_config(_document(), ("mypy", "pyright", "ty"))
+
+    assert config.typing_checkers == ("mypy", "pyright", "ty")
+
+
+def test_parse_config_rejects_missing_required_checker() -> None:
+    document = _document()
+    verification = cast(dict[str, object], document["verification"])
+    verification["typing_checkers"] = ["mypy", "pyright"]
+
+    with pytest.raises(ValueError, match="missing required checkers: ty"):
+        _parse_config(document, ("mypy", "pyright", "ty"))
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [

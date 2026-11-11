@@ -7,7 +7,7 @@ the Markdown-generation library for Python.
 
 The first release targets the SnakeMD 2.4 API:
 
-- first tag: `v2.4.1.0`
+- first release tag: `v2.4.1.0`
 - runtime dependency: `SnakeMD>=2.4.0,<2.5.0`
 - Python: `>=3.10,<4.0`
 
@@ -25,9 +25,12 @@ require `SnakeMD>=2.5,<2.6`. The latest API line is maintained on `main`; an
 older line receives a `release/<major>.<minor>` branch only when it needs a
 correction.
 
-Versions are derived from Git tags with `setuptools-scm`. Release tags use the
-form `vRUNTIME_MAJOR.RUNTIME_MINOR.RUNTIME_PATCH.STUB_REV`; do not edit a
-version string in `pyproject.toml`.
+Versions are derived from Git tags with `setuptools-scm`. Stable release tags
+use the form `vRUNTIME_MAJOR.RUNTIME_MINOR.RUNTIME_PATCH.STUB_REV`; do not edit
+a version string in `pyproject.toml`. After a tag, development builds use the
+next stub revision with a `.devN` suffix. For example, commits after
+`v2.4.1.0` report versions like `2.4.1.1.dev23`; building the exact tag reports
+`2.4.1.0`.
 
 ## Installation
 
@@ -56,19 +59,32 @@ definitions and are audited against the installed runtime source and wheel.
 `pyproject.toml` owns verification dependencies as PEP 735 groups: `dev` for
 native checker and documentation tools, and `target` for the exact runtime and
 consumer checks. Hosted CI installs these groups only; it never installs or
-invokes Alphus. The dependency groups use the PEP 735 support in current pip;
-CI upgrades pip before installing them.
+invokes Alphus. The dependency groups use PEP 735 support in current pip. The
+shared CI runner upgrades pip before installing them.
 
 ```shell
-python -m pip install --upgrade pip
-python -m pip install --group dev --group target
+python3.12 -m tests.run_ci
 ```
+
+This runs the complete Python 3.10–3.15 matrix. Install those interpreters and
+make `python3.10` through `python3.15` available on `PATH`; the runner creates
+temporary checker and target environments outside the checkout, installs the
+`dev` and `target` groups, and removes the environments when it finishes. To
+run one matrix leg, pass its interpreter path:
+
+```shell
+python3.12 -m tests.run_ci --target-python /path/to/python3.12
+```
+
+Hosted CI calls this same runner once per matrix leg, so local and hosted runs
+use the same build, lint, typing, runtime, and packaging commands.
 
 The native typing-fixture runner validates the fixture configuration, requires
 fixture paths to stay inside the repository, and checks both positive and
 expected-negative calls under MyPy, Pyright, and ty. Pytest covers valid and
 invalid configuration values; the runtime smoke keeps package-specific behavior in a
-separate `main()` entry point.
+separate `main()` entry point. CI explicitly requires all three checker entries
+in `stub-quality.json`, so removing one fails the run instead of skipping it.
 
 This is the ordinary native development and test setup. It selects only the
 `dev` and `target` groups and does not request Alphus. For an experimental
@@ -113,19 +129,22 @@ guide][alphus-ci].
 [alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
 
 Hosted CI is independent of Alphus while Alphus is unpublished on PyPI. The
-merged-PR/manual workflow uses six Python targets (3.10–3.15), with
-a separate Python 3.12 checker environment and isolated runtime targets. It
-runs Ruff lint/format, Mypy on the native consumer helpers, mdrepo and rumdl on
-the 3.12 leg; every target builds and installs the stub wheel, checks positive
-and expected-negative MyPy/Pyright/ty consumer fixtures, runs native stubtest and
-the runtime smoke, and validates the distributions with Twine. Python 3.15
-is a configured compatibility target. A local CPython 3.15.2 check also passed
-the installed-wheel consumer typing fixtures and runtime smoke against
-SnakeMD 2.4.1; this does not establish a hosted matrix run, change support
-metadata, or prove every release in the supported range. Alphus's
+PR/manual workflow uses six Python targets (3.10–3.15) and invokes
+`tests.run_ci` for each one. The runner creates a Python 3.12 checker
+environment and an isolated target environment. It runs Ruff lint/format,
+Mypy on the fixture runner, mdrepo and rumdl on the 3.12 leg; every target builds
+and installs the stub wheel, checks positive and expected-negative
+MyPy/Pyright/ty consumer fixtures, runs native stubtest and the runtime smoke,
+and validates the distributions with Twine. Locally, the same command runs all
+six targets when their interpreters are available. Python 3.15 is a configured
+compatibility target. A local CPython 3.15.2 check also passed the
+installed-wheel consumer typing fixtures and runtime smoke against SnakeMD
+2.4.1; this does not establish a hosted matrix run, change support metadata, or
+prove every release in the supported range. Alphus's
 runtime-to-stub API inventory audit remains available in the optional local
 profile and is omitted from hosted CI until the shared tooling is published.
-Opening or pushing a PR branch does not trigger this workflow. The exact
+Opening, reopening, or updating a PR targeting `main` triggers this workflow;
+manual dispatch is also available. The exact
 SnakeMD runtime baseline for consumer checks is `SnakeMD==2.4.1` in the
 `target` dependency group.
 
@@ -141,10 +160,40 @@ request. The exact compatibility pin makes new releases inside the supported
 
 ## Releasing
 
-To release, commit the changes, create a matching version tag (for example,
-`v2.4.1.0`), and push the tag. The publish workflow uses PyPI Trusted
-Publishing; configure the PyPI project to trust this repository's `publish.yml`
-workflow before pushing the first release tag.
+The published baseline is `2.4.1.0` (`v2.4.1.0`). For stub-only fixes against
+the same SnakeMD baseline, increment the final component; the next such release
+is `v2.4.1.1`. When targeting a new SnakeMD baseline, update the dependency
+range if its supported API line changes, use the tested runtime version in the
+first three components, and reset the stub revision to zero.
+
+Release tags must be exact four-part tags such as `v2.4.1.1`. The publish
+workflow builds from the tag, checks that it has this shape, and verifies that
+the wheel filename, sdist filename, and both package metadata versions match
+the tag before uploading. Local CI runs the same artifact check without a tag
+to ensure the wheel and sdist agree on a valid four-part version.
+
+After the release commit has passed the merged-PR CI, create and push an
+annotated tag for that commit. Before the next tag push, configure the PyPI
+project's Trusted Publisher for this repository's `publish.yml` workflow. To
+tag the next stub-only fix, for example:
+
+```shell
+git tag -a v2.4.1.1 -m "Release v2.4.1.1"
+git push origin v2.4.1.1
+```
+
+To reproduce the tagged build locally, use a detached worktree at the tag:
+
+```shell
+git worktree add --detach /tmp/snakemd-stubs-release v2.4.1.1
+cd /tmp/snakemd-stubs-release
+python3.12 -m pip install build twine
+python3.12 -m build
+python3.12 -m tests.verify_release_artifacts dist --tag v2.4.1.1
+python3.12 -m twine check dist/*
+```
+
+Change the example tag and worktree path to the version being released.
 
 ## License
 

@@ -24,6 +24,8 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip build twine
       - run: python -m build
+      - name: Verify release tag and artifacts
+        run: python -m tests.verify_release_artifacts --tag "$GITHUB_REF_NAME" dist
       - run: twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
