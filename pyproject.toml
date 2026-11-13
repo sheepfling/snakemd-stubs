@@ -26,6 +26,7 @@ classifiers = [
 
 [dependency-groups]
 dev = [
+    "alphus @ git+https://github.com/sheepfling/alphus.git@v0.0.3",
     "build>=1.2",
     "mdrepo>=0.0.1.post0",
     "mypy>=2.3",
@@ -51,7 +52,7 @@ target = [
     "SnakeMD==2.4.1",
 ]
 dev-experimental = [
-    "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c",
+    "alphus @ git+https://github.com/sheepfling/alphus.git@v0.0.3",
 ]
 [project.urls]
 Repository = "https://github.com/sheepfling/snakemd-stubs"

@@ -33,7 +33,31 @@ jobs:
         id: target
         with:
           python-version: ${{ matrix.target-python }}
-      - name: Run shared CI checks
+      - name: Create isolated checker and target environments
         run: |
-          "${{ steps.checker.outputs.python-path }}" -m tests.run_ci \
-            --target-python "${{ steps.target.outputs.python-path }}"
+          "${{ steps.checker.outputs.python-path }}" -m venv "$RUNNER_TEMP/checker"
+          "${{ steps.target.outputs.python-path }}" -m venv "$RUNNER_TEMP/target"
+          echo "CHECKER_PYTHON=$RUNNER_TEMP/checker/bin/python" >> "$GITHUB_ENV"
+          echo "TARGET_PYTHON=$RUNNER_TEMP/target/bin/python" >> "$GITHUB_ENV"
+      - name: Install pinned shared checker tools
+        run: |
+          "$CHECKER_PYTHON" -m pip install --upgrade pip
+          "$CHECKER_PYTHON" -m pip install --group dev
+      - name: Install target runtime and native stubtest tools
+        run: |
+          "$TARGET_PYTHON" -m pip install --upgrade pip
+          "$TARGET_PYTHON" -m pip install --group target
+      - name: Repository quality
+        if: ${{ matrix.target-python == '3.12' }}
+        run: '"$CHECKER_PYTHON" -m tests.ci quality'
+      - name: Installed-package compatibility and runtime tests
+        run: |
+          "$CHECKER_PYTHON" -m tests.ci target --target-python "$TARGET_PYTHON" \
+            --report "$RUNNER_TEMP/alphus-target-report.json"
+      - name: Transitional native fixture parity
+        run: |
+          "$CHECKER_PYTHON" -m tests.check_typing_fixtures --target-python "$TARGET_PYTHON" \
+            --require-checker mypy --require-checker pyright --require-checker ty
+      - name: Package-owned wheel and sdist version parity
+        if: ${{ matrix.target-python == '3.12' }}
+        run: '"$CHECKER_PYTHON" -m tests.check_package'

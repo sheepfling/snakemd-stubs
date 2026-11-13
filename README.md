@@ -56,107 +56,12 @@ definitions and are audited against the installed runtime source and wheel.
 
 ## Verification
 
-`pyproject.toml` owns verification dependencies as PEP 735 groups: `dev` for
-native checker and documentation tools, and `target` for the exact runtime and
-consumer checks. Hosted CI installs these groups only; it never installs or
-invokes Alphus. The dependency groups use PEP 735 support in current pip. The
-shared CI runner upgrades pip before installing them.
-
-```shell
-python3.12 -m tests.run_ci
-```
-
-This runs the complete Python 3.10–3.15 matrix. Install those interpreters and
-make `python3.10` through `python3.15` available on `PATH`; the runner creates
-temporary checker and target environments outside the checkout, installs the
-`dev` and `target` groups, and removes the environments when it finishes. To
-run one matrix leg, pass its interpreter path:
-
-```shell
-python3.12 -m tests.run_ci --target-python /path/to/python3.12
-```
-
-Hosted CI calls this same runner once per matrix leg, so local and hosted runs
-use the same build, lint, typing, runtime, and packaging commands.
-
-The native typing-fixture runner validates the fixture configuration, requires
-fixture paths to stay inside the repository, and checks both positive and
-expected-negative calls under MyPy, Pyright, and ty. Pytest covers valid and
-invalid configuration values; the runtime smoke keeps package-specific behavior in a
-separate `main()` entry point. CI explicitly requires all three checker entries
-in `stub-quality.json`, so removing one fails the run instead of skipping it.
-
-This is the ordinary native development and test setup. It selects only the
-`dev` and `target` groups and does not request Alphus. For an experimental
-maintainer-side audit, install the separately named `dev-experimental` group
-in a separate environment:
-
-```shell
-python -m pip install --group dev-experimental
-alphus --root . --config quality-gates.toml --run --profile check
-```
-
-The `dev-experimental` group is excluded from the ordinary pip install above
-and from hosted CI. It contains a Git dependency and may be unavailable when
-Git access is blocked. uv resolves all declared dependency groups when creating
-or refreshing a lockfile, even when a later sync selects only `dev`; therefore
-`uv lock` may require Git access to this experimental group. uv was not
-available in the validation environment, so its behavior was not tested here.
-See uv's [dependency-group resolution] documentation and [automatic lock
-behavior].
-
-[dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
-[automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
-
-The project owns `quality-gates.toml`; it calls Alphus's existing rules rather
-than copying their implementations. Alphus's installed CLI entry points provide
-the shared verification tools. `snakemd-stubs` uses
-Alphus only as a development tool. The compatibility command builds both
-distributions from a temporary source copy, installs the wheel, and runs the
-runtime inventory, strict positive and expected-negative consumer probes,
-stubtest, and a runtime smoke through a consumer directory outside the source
-checkout.
-
-```shell
-alphus-stub-quality \
-  --root . --config stub-quality.json --with-twine
-```
-
-The optional `dev-experimental` group is separate from both native CI groups.
-Shared tool configuration is documented in [Alphus's stub-package CI
-guide][alphus-ci].
-
-[alphus-ci]: https://github.com/sheepfling/alphus/blob/b4b6055a6ae0286912b461cd2b4262b3318c5a0c/docs/STUB-PACKAGE-CI.md
-
-Hosted CI is independent of Alphus while Alphus is unpublished on PyPI. The
-PR/manual workflow uses six Python targets (3.10–3.15) and invokes
-`tests.run_ci` for each one. The runner creates a Python 3.12 checker
-environment and an isolated target environment. It runs Ruff lint/format,
-Mypy on the fixture runner, mdrepo and rumdl on the 3.12 leg; every target builds
-and installs the stub wheel, checks positive and expected-negative
-MyPy/Pyright/ty consumer fixtures, runs native stubtest and the runtime smoke,
-and validates the distributions with Twine. Locally, the same command runs all
-six targets when their interpreters are available. Python 3.15 is a configured
-compatibility target. A local CPython 3.15.2 check also passed the
-installed-wheel consumer typing fixtures and runtime smoke against SnakeMD
-2.4.1; this does not establish a hosted matrix run, change support metadata, or
-prove every release in the supported range. Alphus's
-runtime-to-stub API inventory audit remains available in the optional local
-profile and is omitted from hosted CI until the shared tooling is published.
-Opening, reopening, or updating a PR targeting `main` triggers this workflow;
-manual dispatch is also available. The exact
-SnakeMD runtime baseline for consumer checks is `SnakeMD==2.4.1` in the
-`target` dependency group.
-
-Before release, also check every SnakeMD release inside the supported runtime
-range. Provision each selected runtime into each target venv and invoke the
-checker with `--target-python` as shown below. The routine matrix establishes
-only the exact pinned runtime; structural parity and smoke cases do not prove
-all runtime behavior or untested releases.
-
-Dependabot checks SnakeMD weekly and limits version updates to one open pull
-request. The exact compatibility pin makes new releases inside the supported
-`>=2.4,<2.5` range visible to CI without expanding the routine runtime matrix.
+See [Development and verification](DEVELOPMENT.md) for the common pinned
+Alphus v0.0.3 workflow, separate checker/target environments, and the Python
+3.10–3.15 matrix. Shared gates own the repeated checking mechanisms. The
+package retains its public API inventory, runtime assertions, allowlist and
+release-version validation. Native fixture checks remain a transitional
+parity lane until the shared contract covers their boundary checks.
 
 ## Releasing
 
@@ -172,7 +77,7 @@ the wheel filename, sdist filename, and both package metadata versions match
 the tag before uploading. Local CI runs the same artifact check without a tag
 to ensure the wheel and sdist agree on a valid four-part version.
 
-After the release commit has passed the merged-PR CI, create and push an
+After the release commit has passed the candidate CI, create and push an
 annotated tag for that commit. Before the next tag push, configure the PyPI
 project's Trusted Publisher for this repository's `publish.yml` workflow. To
 tag the next stub-only fix, for example:
@@ -199,62 +104,14 @@ Change the example tag and worktree path to the version being released.
 
 The stubs are distributed under the MIT License. See `LICENSE`.
 
-### Shared verification tooling
+## Shared verification tooling
 
-The reusable example runner and AST/API assertions come from the reviewed
-Alphus revision. Install it only for an experimental audit in a dedicated
-Python 3.11+ verification environment; the Git dependency is isolated in the
-`dev-experimental` group and is not used by native development or CI:
-
-```shell
-python -m pip install --upgrade pip
-python -m pip install --group dev --group target
-python -m pip install --group dev-experimental
-alphus-stub-quality --root . --config stub-quality.json --with-twine
-```
-
-For an unpublished local candidate, install its built Alphus wheel instead of
-the Git requirement. The consumer wheel has no Alphus runtime dependency.
-Alphus and native Mypy/Pyright/ty run in a Python 3.11+ checker environment.
-Build/install, API audit, native stubtest and smoke execute in a distinct target
-venv. The target does not install Alphus. For example, after provisioning the
-checker as above, use a Python 3.10 target:
-
-```shell
-python -m pip install --upgrade pip
-python3.10 -m venv /path/to/target
-/path/to/target/bin/python -m pip install --group target
-export ALPHUS_TARGET_PYTHON=/path/to/target/bin/python
-alphus-stub-quality --root . --config stub-quality.json \
-  --with-twine --target-python /path/to/target/bin/python --report target-result.json
-```
-
-Repeat with each Python target 3.10–3.15. All three native type checkers explicitly
-select that target's packages and language version; the JSON report records
-checker/target identities and each executed stage. Failed target checks stop the
-run without falling back to the checker.
-
-### Consumer profiles
-
-The `check` profile composes `stubs`, `python`, and `markdown`. Run the complete
-selection with the installed pinned Alphus tooling:
-
-```shell
-alphus --root . --config quality-gates.toml --run --profile check
-```
-
-Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
-part. The stub stage builds and installs the wheel before later tooling runs.
-These instructions are for optional local verification. Hosted CI does not
-install the Git-based Alphus pin or call its actions; it uses the repository's
-native Python tools and fixture runner until Alphus is published on PyPI.
-The installed-wheel API audit is therefore a local optional gate, while native
-stubtest, consumer fixtures, and runtime smoke remain in the merged/manual CI
-workflow.
+[Alphus's v0.0.3 guide](https://github.com/sheepfling/alphus/blob/v0.0.3/docs/STUB-PACKAGE-CI.md)
+describes the shared execution and evidence contracts. The `dev-experimental`
+group remains as a compatibility alias; ordinary `dev` now includes Alphus.
 
 ### Standalone package checks
 
-See [package artifact checks](docs/PACKAGE-CHECKS.md) for a reusable wheel/sdist
-validation command and real-build corruption regressions. Existing native CI
-already checks artifact parity; this command provides an independent entry point
-for local checks and future shared-runner integration.
+See [package artifact checks](docs/PACKAGE-CHECKS.md) for the standalone
+wheel/sdist validation command and real-build corruption regressions. The
+package-owned CI lane runs this command once on Python 3.12.

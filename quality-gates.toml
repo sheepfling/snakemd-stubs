@@ -4,7 +4,7 @@ schema_version = 1
 include = [
   "snakemd-stubs/**/*.pyi",
   "tests/**/*.py",
-  "README.md",
+  "*.md",
   "docs/**/*.md",
   "*.toml",
   ".rumdl.toml",
@@ -82,7 +82,7 @@ argv = ["mdrepo", "--root", ".", "check"]
 [[orchestration.steps]]
 kind = "command"
 name = "Markdown style"
-argv = ["rumdl", "check", "README.md", "docs/API-COVERAGE.md"]
+argv = ["rumdl", "check", "README.md", "DEVELOPMENT.md", "docs"]
 
 [[orchestration.steps]]
 kind = "command"

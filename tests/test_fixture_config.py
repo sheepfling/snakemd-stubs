@@ -8,7 +8,6 @@ from typing import cast
 
 import pytest
 
-from tests import check_typing_fixtures
 from tests.check_typing_fixtures import (
     FixtureConfig,
     _command,
@@ -83,7 +82,7 @@ def test_ty_command_uses_installed_target_python_and_project_config(
         assert Path(path) == Path(sys.executable).parent
         return str(Path(path) / "ty")
 
-    monkeypatch.setattr(check_typing_fixtures.shutil, "which", find_checker)
+    monkeypatch.setattr("tests.check_typing_fixtures.shutil.which", find_checker)
     command = _command(
         "ty",
         Path("tests/typecheck.py"),

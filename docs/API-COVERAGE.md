@@ -49,25 +49,21 @@ annotation checks strict.
 
 ## Run and limits
 
-Run the optional local compatibility check from the repository root after
-installing native tools from the `dev` and `target` groups and explicitly
-installing the `dev-experimental` group in that optional environment:
+Prepare separate checker and target environments using the
+[development instructions](../DEVELOPMENT.md), then run from the repository root:
 
 ```shell
-python -m pip install --group dev --group target
-python -m pip install --group dev-experimental
-alphus-stub-quality \
-  --root . --config stub-quality.json --with-twine
+.venv-checker/bin/python -m tests.ci target \
+  --target-python .venv-target/bin/python --report target-result.json
 ```
 
-It builds distributions from a temporary source copy, installs the wheel, and
-runs the audit and consumer checks outside the checkout. The generic verifier
-and API-audit support live in Alphus; API expectations and fixtures stay here.
-Hosted CI currently omits this API inventory until Alphus is available on PyPI.
-Its native checks still run stubtest, both consumer typing fixtures, packaging,
-and the runtime smoke on the configured exact runtime pin. Before release, run
-the optional Alphus command in clean environments for the declared Python
-versions and supported runtime releases.
+The shared gate builds distributions from a temporary source copy, installs the
+wheel, and runs the API audit and consumer checks outside the checkout. Generic
+verification lives in Alphus; API expectations and fixtures stay here. Hosted
+CI runs this audit for every configured Python target, followed by the native
+fixture parity lane. The package-owned artifact validator runs separately on
+Python 3.12. Before release, repeat these checks in clean environments for the
+declared Python versions and supported runtime releases.
 
 These checks provide structural API, type-checking, and selected runtime
 evidence. They do not prove every Markdown rendering behavior or error case.

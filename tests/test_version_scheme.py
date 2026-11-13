@@ -34,7 +34,9 @@ def _version(repository: Path) -> str:
         text=True,
         cwd=repository,
     )
-    return json.loads(result.stdout)["version"]
+    version = json.loads(result.stdout)["version"]
+    assert isinstance(version, str)
+    return version
 
 
 def test_tag_and_development_versions_follow_stub_revision_scheme(tmp_path: Path) -> None:
