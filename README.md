@@ -251,3 +251,10 @@ native Python tools and fixture runner until Alphus is published on PyPI.
 The installed-wheel API audit is therefore a local optional gate, while native
 stubtest, consumer fixtures, and runtime smoke remain in the merged/manual CI
 workflow.
+
+### Standalone package checks
+
+See [package artifact checks](docs/PACKAGE-CHECKS.md) for a reusable wheel/sdist
+validation command and real-build corruption regressions. Existing native CI
+already checks artifact parity; this command provides an independent entry point
+for local checks and future shared-runner integration.
