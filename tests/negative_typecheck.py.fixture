@@ -1,0 +1,13 @@
+from snakemd import NotExported  # expect-error
+from snakemd import Alert, Block, Document, Element, Inline, Table, Template
+
+doc = Document()
+doc.add_heading(42)  # expect-error
+doc.add_block("not a block")  # expect-error
+Inline("text", bold="yes")  # expect-error
+Alert.Kind.MISSING  # expect-error
+Table(["h"], [["v"]], align=["left"])  # expect-error
+doc.not_a_public_method()  # expect-error
+Element()  # expect-error
+Block()  # expect-error
+Template()  # expect-error
