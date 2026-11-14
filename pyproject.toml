@@ -76,6 +76,8 @@ regex = '^v(?P<version>(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){3})$'
 [tool.mypy]
 python_version = "3.10"
 strict = true
+# This consumer fixture is checked in installed-target lanes, not checker tooling.
+exclude = ["^tests/typecheck\\.py$"]
 
 # Scope Pyright to the installed-package consumer fixture; audit/test helpers
 # have separate checks and are not part of the public type-consumer probe.

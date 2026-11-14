@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-
-from .typecheck import exercise_public_api
+from runpy import run_path
+from typing import cast
 
 
 def main() -> None:
+    # Keep the installed-consumer fixture out of the tooling MyPy import graph.
+    # Its imports are checked against the installed package by the target gates.
+    fixture = run_path(str(Path(__file__).with_name("typecheck.py")))
+    exercise_public_api = cast(Callable[[Path, Path], str], fixture["exercise_public_api"])
     with tempfile.TemporaryDirectory(prefix="snakemd-runtime-smoke-") as temporary:
         root = Path(temporary)
         csv_path = root / "items.csv"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import cast
@@ -35,6 +36,16 @@ def test_parse_config_returns_validated_fixture_config() -> None:
     assert config.negative_fixture == Path("tests/negative_typecheck.py.fixture")
     assert config.typing_checkers == ("mypy", "pyright", "ty")
     assert config.ty_diagnostics == ("Expected `str`, found `Literal[42]`",)
+
+
+def test_installed_typing_gate_keeps_consumer_fixture_enabled() -> None:
+    root = Path(__file__).resolve().parents[1]
+    document = json.loads((root / "stub-quality.json").read_text(encoding="utf-8"))
+    config = _parse_config(document, ("mypy", "pyright", "ty"))
+
+    assert config.positive_fixture == Path("tests/typecheck.py")
+    assert (root / config.positive_fixture).is_file()
+    assert config.typing_checkers == ("mypy", "pyright", "ty")
 
 
 def test_parse_config_requires_all_ci_checkers() -> None:
